@@ -37,12 +37,14 @@ def get_team_results(team_name, df):
     res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
     res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
 
+    res_df['Points'] = np.zeros((res_df.shape[0], 1))
+    res_df['Points'].loc[res_df['Result'] =='Win'] = 3
+    res_df['Points'].loc[res_df['Result'] =='Tie'] = 1
+    res_df['Points'].loc[res_df['Result'] =='Loss'] = 0
+    res_df['CumPoints'] = res_df['Points'].cumsum()
+
     res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
     return res_df
-
-res_df = get_team_results('Paris SG', df)
-
-fig = px.scatter(data_frame=res_df, x='StartDate', y='GoalsScored')
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -59,7 +61,7 @@ app.layout = html.Div(children=[
 
     dcc.Graph(
         id='scored-taken-goals'
-    )
+    ),
 
     dcc.Graph(
         id='hist_wlt'
@@ -76,19 +78,12 @@ def update_scatter_graph(team):
     return {
         'data': [
             dict(
-                x=res_df['StartDate'],
-                y=res_df['GoalsScored'],
+                x=res_df['LeagueDay'],
+                y=res_df['CumPoints'],
                 mode='markers',
-                name='Scored',
-                hovertext=res_df['Opponent']
+                name='Points',
+                hovertext=[res_df['Opponent'],res_df['StartDate']]
             ),
-            dict(
-                x=res_df['StartDate'],
-                y=res_df['GoalsTaken'],
-                mode='markers',
-                name='Taken',
-                hovertext=res_df['Opponent']
-            )
         ],
         'layout': {
             'height': 225,
@@ -97,7 +92,7 @@ def update_scatter_graph(team):
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
                 'xref': 'paper', 'yref': 'paper', 'showarrow': False,
                 'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
-                'text': 'Goals (scored and taken)'
+                'text': 'Season Points'
             }],
             'yaxis': {'type': 'linear'},
             'xaxis': {'showgrid': False}
@@ -116,8 +111,15 @@ def update_hist_graph(team):
                 x=res_df['StartDate'],
                 y=res_df['GoalsScored'],
                 type='bar',
-                name='Season'
-            )],
+                name='Goals Scored'
+            ),
+            dict(
+                x=res_df['StartDate'],
+                y=res_df['GoalsTaken'],
+                type='bar',
+                name='Goals Taken'
+            )
+        ],
         'layout': {
             'height': 225,
             'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
@@ -125,7 +127,7 @@ def update_hist_graph(team):
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
                 'xref': 'paper', 'yref': 'paper', 'showarrow': False,
                 'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
-                'text': 'Goals (scored and taken)'
+                'text': 'Game Score'
             }],
             'yaxis': {'type': 'linear'},
             'xaxis': {'showgrid': False}
