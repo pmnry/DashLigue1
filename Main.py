@@ -32,10 +32,11 @@ def get_team_results(team_name, df):
     res_df['GoalsTaken'].loc[home_mask] = res_df['AwayGoals'].loc[home_mask]
 
     res_df['Result'] = np.zeros((res_df.shape[0], 1))
-
     res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
     res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
     res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
+
+    res_df = res_df.set_index('LeagueDay').sort_index()
 
     res_df['Points'] = np.zeros((res_df.shape[0], 1))
     res_df['Points'].loc[res_df['Result'] =='Win'] = 3
@@ -44,7 +45,10 @@ def get_team_results(team_name, df):
     res_df['CumPoints'] = res_df['Points'].cumsum()
 
     res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
+
     return res_df
+
+test = get_team_results('Paris SG', df)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -78,11 +82,11 @@ def update_scatter_graph(team):
     return {
         'data': [
             dict(
-                x=res_df['LeagueDay'],
+                x=res_df['StartDate'],
                 y=res_df['CumPoints'],
                 mode='markers',
                 name='Points',
-                hovertext=[res_df['Opponent'],res_df['StartDate']]
+                hovertext=[res_df['Opponent']]
             ),
         ],
         'layout': {
