@@ -31,6 +31,12 @@ def get_team_results(team_name, df):
     res_df['GoalsTaken'].loc[away_mask] = res_df['HomeGoals'].loc[away_mask]
     res_df['GoalsTaken'].loc[home_mask] = res_df['AwayGoals'].loc[home_mask]
 
+    res_df['Result'] = np.zeros((res_df.shape[0], 1))
+
+    res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
+    res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
+    res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
+
     res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
     return res_df
 
@@ -54,12 +60,17 @@ app.layout = html.Div(children=[
     dcc.Graph(
         id='scored-taken-goals'
     )
+
+    dcc.Graph(
+        id='hist_wlt'
+    )
+
 ])
 
 @app.callback(
     dash.dependencies.Output('scored-taken-goals', 'figure'),
     [dash.dependencies.Input('team', 'value')])
-def update_graph(team):
+def update_scatter_graph(team):
     res_df = get_team_results(team, df)
 
     return {
@@ -79,6 +90,34 @@ def update_graph(team):
                 hovertext=res_df['Opponent']
             )
         ],
+        'layout': {
+            'height': 225,
+            'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
+            'annotations': [{
+                'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
+                'xref': 'paper', 'yref': 'paper', 'showarrow': False,
+                'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
+                'text': 'Goals (scored and taken)'
+            }],
+            'yaxis': {'type': 'linear'},
+            'xaxis': {'showgrid': False}
+        }
+    }
+
+@app.callback(
+    dash.dependencies.Output('hist_wlt', 'figure'),
+    [dash.dependencies.Input('team', 'value')])
+def update_hist_graph(team):
+    res_df = get_team_results(team, df)
+
+    return {
+        'data': [
+            dict(
+                x=res_df['StartDate'],
+                y=res_df['GoalsScored'],
+                type='bar',
+                name='Season'
+            )],
         'layout': {
             'height': 225,
             'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
