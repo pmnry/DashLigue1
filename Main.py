@@ -36,7 +36,7 @@ def get_team_results(team_name, df):
     res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
     res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
 
-    res_df = res_df.set_index('LeagueDay').sort_index()
+    res_df = res_df.set_index('LeagueDay', drop=False).sort_index()
 
     res_df['Points'] = np.zeros((res_df.shape[0], 1))
     res_df['Points'].loc[res_df['Result'] =='Win'] = 3
@@ -57,27 +57,39 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div(children=[
     html.H1(children='Ligue 1 Results'),
 
-    html.Div(children='''
-        Goals (scored and taken)
-    '''),
+    html.Div([
+        html.Div([
+            html.Div(children='''Goals (scored and taken)'''),
 
-    dcc.Dropdown(id='team', options=[{'label':x, 'value':x} for x in list(df['HomeTeam'].unique())], value='Paris SG'),
+            dcc.Dropdown(id='teams', options=[{'label':x, 'value':x} for x in list(df['HomeTeam'].unique())],
+                     multi=True, value='Paris SG'),
 
-    dcc.Graph(
-        id='scored-taken-goals'
-    ),
+            dcc.Graph(
+                id='scored-taken-goals'
+            )], className='six columns'),
 
-    dcc.Graph(
-        id='hist_wlt'
-    )
+        html.Div([
+            dcc.Dropdown(id='team', options=[{'label': x, 'value': x} for x in list(df['HomeTeam'].unique())],
+                         value='Paris SG'),
 
-])
+            dcc.Graph(
+                id='hist_wlt'
+            )
+        ],
+            className='six columns')
+    ], className='row')])
 
 @app.callback(
     dash.dependencies.Output('scored-taken-goals', 'figure'),
-    [dash.dependencies.Input('team', 'value')])
-def update_scatter_graph(team):
-    res_df = get_team_results(team, df)
+    [dash.dependencies.Input('teams', 'value')])
+def update_scatter_graph(teams):
+    teams_dfs = []
+
+    if teams is not list:
+        teams = list(teams)
+
+    for team in teams:
+        teams_dfs.append(get_team_results(team, df))
 
     return {
         'data': [
@@ -86,9 +98,10 @@ def update_scatter_graph(team):
                 y=res_df['CumPoints'],
                 mode='markers',
                 name='Points',
-                hovertext=[res_df['Opponent']]
-            ),
-        ],
+                hovertemplate= '<b>Points</b>: %{y}' + '<br><b>League Day</b>: %{text}<br>',
+                text=[str(l) for l in res_df['LeagueDay']]
+            )
+        for res_df in teams_dfs],
         'layout': {
             'height': 225,
             'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
