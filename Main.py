@@ -18,9 +18,9 @@ def get_team_results(team_name, df):
     away_mask = (df['AwayTeam']==team_name)
     home_mask = (df['HomeTeam']==team_name)
     res_df = df[mask]
-    res_df['Opponent'] = np.zeros((res_df.shape[0],1))
-    res_df['GoalsScored'] = np.zeros((res_df.shape[0], 1))
-    res_df['GoalsTaken'] = np.zeros((res_df.shape[0], 1))
+    res_df['Opponent'] = 0
+    res_df['GoalsScored'] = 0
+    res_df['GoalsTaken'] = 0
 
     res_df['Opponent'].loc[away_mask] = res_df['HomeTeam'].loc[away_mask]
     res_df['Opponent'].loc[home_mask] = res_df['AwayTeam'].loc[home_mask]
@@ -31,14 +31,14 @@ def get_team_results(team_name, df):
     res_df['GoalsTaken'].loc[away_mask] = res_df['HomeGoals'].loc[away_mask]
     res_df['GoalsTaken'].loc[home_mask] = res_df['AwayGoals'].loc[home_mask]
 
-    res_df['Result'] = np.zeros((res_df.shape[0], 1))
+    res_df['Result'] = 0
     res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
     res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
     res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
 
     res_df = res_df.set_index('LeagueDay', drop=False).sort_index()
 
-    res_df['Points'] = np.zeros((res_df.shape[0], 1))
+    res_df['Points'] = 0
     res_df['Points'].loc[res_df['Result'] =='Win'] = 3
     res_df['Points'].loc[res_df['Result'] =='Tie'] = 1
     res_df['Points'].loc[res_df['Result'] =='Loss'] = 0
@@ -59,7 +59,7 @@ app.layout = html.Div(children=[
 
     html.Div([
         html.Div([
-            html.Div(children='''Goals (scored and taken)'''),
+            html.Div(children='''Season points'''),
 
             dcc.Dropdown(id='teams', options=[{'label':x, 'value':x} for x in list(df['HomeTeam'].unique())],
                      multi=True, value='Paris SG'),
@@ -85,8 +85,8 @@ app.layout = html.Div(children=[
 def update_scatter_graph(teams):
     teams_dfs = []
 
-    if teams is not list:
-        teams = list(teams)
+    if type(teams) != list:
+        teams = [teams]
 
     for team in teams:
         teams_dfs.append(get_team_results(team, df))
@@ -103,7 +103,7 @@ def update_scatter_graph(teams):
             )
         for res_df in teams_dfs],
         'layout': {
-            'height': 225,
+            'height': 400,
             'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
             'annotations': [{
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
@@ -138,7 +138,7 @@ def update_hist_graph(team):
             )
         ],
         'layout': {
-            'height': 225,
+            'height': 400,
             'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
             'annotations': [{
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
