@@ -125,13 +125,13 @@ def update_hist_graph(team):
     return {
         'data': [
             dict(
-                x=res_df['StartDate'],
+                x=res_df['LeagueDay'],
                 y=res_df['GoalsScored'],
                 type='bar',
                 name='Goals Scored'
             ),
             dict(
-                x=res_df['StartDate'],
+                x=res_df['LeagueDay'],
                 y=res_df['GoalsTaken'],
                 type='bar',
                 name='Goals Taken'
