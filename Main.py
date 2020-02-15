@@ -5,15 +5,18 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px
 import plotly.graph_objects as go
+from DataHandler import consolidate_season_data
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
 
 ### Read Data
-df = pd.read_csv(DATA_PATH + FILENAME, sep=';', names=['LeagueDay', 'StartDate', 'EndDate', 'HomeTeam', 'AwayTeam',
-                                                       'HomeGoals', 'AwayGoals'], parse_dates=[1,2], header=0)
+#df = pd.read_csv(DATA_PATH + FILENAME, sep=';', names=['LeagueDay', 'StartDate', 'EndDate', 'HomeTeam', 'AwayTeam',
+#                                                       'HomeGoals', 'AwayGoals'], parse_dates=[1,2], header=0)
 
-def get_team_results(team_name, df):
+def get_team_results(team_name, season):
+    df = consolidate_season_data('ligue_1', season)
+
     mask = (df['HomeTeam']==team_name) + (df['AwayTeam']==team_name)
     away_mask = (df['AwayTeam']==team_name)
     home_mask = (df['HomeTeam']==team_name)
@@ -48,7 +51,7 @@ def get_team_results(team_name, df):
 
     return res_df
 
-test = get_team_results('Paris SG', df)
+test = get_team_results('Paris Saint Germain', 2010)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -56,21 +59,19 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div(children=[
     html.H1(children='Ligue 1 Results'),
-
+    dcc.Dropdown(id='season', options=[{'label': x, 'value': x} for x in list(range(2010,2020))], value=2018),
     html.Div([
         html.Div([
             html.Div(children='''Season points'''),
 
-            dcc.Dropdown(id='teams', options=[{'label':x, 'value':x} for x in list(df['HomeTeam'].unique())],
-                     multi=True, value='Paris SG'),
+            dcc.Dropdown(id='all_teams1', multi=True),
 
             dcc.Graph(
                 id='scored-taken-goals'
             )], className='six columns'),
 
         html.Div([
-            dcc.Dropdown(id='team', options=[{'label': x, 'value': x} for x in list(df['HomeTeam'].unique())],
-                         value='Paris SG'),
+            dcc.Dropdown(id='all_teams2'),
 
             dcc.Graph(
                 id='hist_wlt'
@@ -79,22 +80,30 @@ app.layout = html.Div(children=[
             className='six columns')
     ], className='row')])
 
+@app.callback(dash.dependencies.Output('all_teams1', 'options'), [dash.dependencies.Input('season', 'value')])
+def get_teams_options_scatter(season):
+    return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
+
+@app.callback(dash.dependencies.Output('all_teams2', 'options'), [dash.dependencies.Input('season', 'value')])
+def get_teams_options_hist(season):
+    return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
+
 @app.callback(
     dash.dependencies.Output('scored-taken-goals', 'figure'),
-    [dash.dependencies.Input('teams', 'value')])
-def update_scatter_graph(teams):
+    [dash.dependencies.Input('all_teams1', 'value'), dash.dependencies.Input('season', 'value')])
+def update_scatter_graph(teams, season):
     teams_dfs = []
 
     if type(teams) != list:
         teams = [teams]
 
     for team in teams:
-        teams_dfs.append(get_team_results(team, df))
+        teams_dfs.append(get_team_results(team, season))
 
     return {
         'data': [
             dict(
-                x=res_df['StartDate'],
+                x=res_df.index,
                 y=res_df['CumPoints'],
                 mode='markers',
                 name='Points',
@@ -118,9 +127,9 @@ def update_scatter_graph(teams):
 
 @app.callback(
     dash.dependencies.Output('hist_wlt', 'figure'),
-    [dash.dependencies.Input('team', 'value')])
-def update_hist_graph(team):
-    res_df = get_team_results(team, df)
+    [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season', 'value')])
+def update_hist_graph(team, season):
+    res_df = get_team_results(team, season)
 
     return {
         'data': [
