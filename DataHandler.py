@@ -64,5 +64,3 @@ def consolidate_season_data(league_name, season_year):
     df = df.drop(['awayTeam', 'homeTeam', 'score', 'referee', 'league'], axis=1)
 
     return df
-
-#get_league_fixtures('Ligue 1', 'France')
