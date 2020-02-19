@@ -76,7 +76,7 @@ def build_tabs():
                     className='tabs',
                     children=[
                         dcc.Tabs(id='app-tabs',
-                                 value='tab2',
+                                 value='tab1',
                                  className='custom-tabs',
                                  children=[dcc.Tab(id='season-tab',
                                                    label='Season Data',
@@ -111,10 +111,16 @@ def build_tab1():
 
 def build_tab2():
     return [
-        html.Div(children='''Goals Scored/Taken'''),
-        dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
-        dcc.Graph(id='hist_wlt'),
-        build_summary()
+        dcc.Dropdown(id='season', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
+        html.Div([
+            html.Div([
+                html.Div(children='''Goals Scored/Taken'''),
+                dcc.Dropdown(id='all_teams2'),
+                dcc.Graph(
+                    id='hist_wlt'
+                )], className='six columns')]
+        ),
+        #build_summary()
     ]
 
 
@@ -171,77 +177,6 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
 
-# app.layout = html.Div(children=[
-#     build_banner(),
-#
-#     dcc.Interval(
-#         id="interval-component",
-#         interval=2 * 1000,  # in milliseconds
-#         n_intervals=50,  # start at batch 50
-#         disabled=True,
-#     ),
-#     html.Div(
-#         id="app-container",
-#         children=[
-#             build_tabs(),
-#             # Main app
-#             html.Div(id="app-content"),
-#         ],
-#     ),
-    # dcc.Dropdown(id='season', options=[{'label': x, 'value': x} for x in list(range(2010,2020))], value=2018),
-    # html.Div([
-    #     html.Div([
-    #         html.Div(children='''Season points'''),
-    #
-    #         dcc.Dropdown(id='all_teams1', value='Paris Saint Germain', multi=True),
-    #
-    #         dcc.Graph(
-    #             id='scored-taken-goals'
-    #         )], className='six columns'),
-    #
-    #     html.Div([
-    #         html.Div(children='''Goals Scored/Taken'''),
-    #
-    #         dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
-    #
-    #         dcc.Graph(
-    #             id='hist_wlt'
-    #         )
-    #     ],
-    #         className='six columns')
-    # ], className='row'),
-    # html.Div([
-    #     html.Div([html.Div([])], className='six columns'),
-    #     html.Div([
-    #         dash_table.DataTable(id='summary_table',
-    #                              columns=[{"name": i, "id": i} for i in ['Stats', 'Values']],
-    #                              style_cell_conditional=[
-    #                                                         {
-    #                                                             'if': {'column_id': c},
-    #                                                             'textAlign': 'left'
-    #                                                         } for c in ['Stats']
-    #                                                     ] + [
-    #                                                         {
-    #                                                             'if': {'column_id': c},
-    #                                                             'textAlign': 'center'
-    #                                                         } for c in ['Values']
-    #                                                     ],
-    #                              style_data_conditional=[
-    #                                  {
-    #                                      'if': {'row_index': 'odd'},
-    #                                      'backgroundColor': 'rgb(248, 248, 248)'
-    #                                  }
-    #                              ],
-    #                              style_header={
-    #                                  'backgroundColor': 'rgb(230, 230, 230)',
-    #                                  'fontWeight': 'bold'
-    #                              }),
-    #     ], className='six columns')
-    #
-    # ], className='row'),
-#    dcc.Store(id="n-interval-stage", data=50),
-#])
-
 app.layout = serve_layout()
 
 @app.callback(
@@ -274,18 +209,25 @@ def update_interval_state(tab_switch, cur_interval, disabled, cur_stage):
         return cur_interval
     return cur_stage
 
+@app.callback(dash.dependencies.Output('all_teams1', 'value'),
+               [dash.dependencies.Input('all_teams1', 'options')])
+def get_teams_value_scatter(all_teams1):
+    return all_teams1[0]['value']
 
-@app.callback([dash.dependencies.Output('all_teams1', 'options'), dash.dependencies.Output('all_teams1', 'value')],
+@app.callback(dash.dependencies.Output('all_teams1', 'options'),
                [dash.dependencies.Input('season', 'value')])
 def get_teams_options_scatter(season):
     return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
 
-
-@app.callback([dash.dependencies.Output('all_teams2', 'options'), dash.dependencies.Output('all_teams2', 'value')],
+@app.callback([dash.dependencies.Output('all_teams2', 'options')],
                [dash.dependencies.Input('season', 'value')])
 def get_teams_options_hist(season):
     return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
 
+@app.callback([dash.dependencies.Output('all_teams2', 'value')],
+               [dash.dependencies.Input('all_teams2', 'options')])
+def get_teams_value_scatter(all_teams2):
+    return all_teams2[0]['value']
 
 @app.callback(
     dash.dependencies.Output('scored-taken-goals', 'figure'),
