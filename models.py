@@ -17,6 +17,10 @@ class League(db.Model):
     away_team = db.Column(db.String(128), index=True, unique=False)
     home_team_id = db.Column(db.Integer, index=True, unique=True)
     home_team = db.Column(db.String(128), index=True, unique=False)
+    halftime = db.Column(db.String(64), index=True, unique=False)
+    fulltime = db.Column(db.String(64), index=True, unique=False)
+    game_date = db.Column(db.DateTime, index=True, unique=False)
+    league_day = db.Column(db.Integer, primary_key=True)
 
     def __repr__(self):
         return '<Fixture #{}>'.format(self.fixture_id)
