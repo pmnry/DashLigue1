@@ -1,11 +1,12 @@
 import requests
-from config import API_KEY, COUNT_API_CALLS
+from config import API_KEY
 import json
 import pandas as pd
 
 URL = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 URL_LEAGUES = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 ALL_FIXTURES_URL = "https://api-football-v1.p.rapidapi.com/v2/fixtures/league/"
+FIXTURES_STATS_URL = "https://api-football-v1.p.rapidapi.com/v2/statistics/fixture/"
 
 headers = {
     'x-rapidapi-host': "api-football-v1.p.rapidapi.com",
@@ -42,6 +43,16 @@ def get_league_fixtures(league_name, country, seasons=None):
             with open('data\\' + league_name.lower().replace(' ', '_') + '_fixtures_' + season + '.txt', 'w') as outfile:
                 json.dump(json.loads(api_response.content), outfile)
 
+    return json.loads(api_response.content)['api']
+
+def get_fixtures_stats(fixture_id):
+    try:
+        api_response = requests.request("GET", FIXTURES_STATS_URL + str(fixture_id), headers=headers)
+    except:
+        print('Error calling API')
+
+    if api_response.status_code == 200:
+        return json.loads(api_response.content)['api']
 
 def consolidate_season_data(league_name, season_year):
     with open('data\\' + league_name.lower().replace(' ', '_') + '_fixtures_' + str(season_year) + '.txt') as json_file:
@@ -64,3 +75,40 @@ def consolidate_season_data(league_name, season_year):
     df = df.drop(['awayTeam', 'homeTeam', 'score', 'referee', 'league'], axis=1)
 
     return df
+
+def get_team_results(team_name, season):
+    df = consolidate_season_data('ligue_1', season)
+
+    mask = (df['HomeTeam'] == team_name) + (df['AwayTeam'] == team_name)
+    away_mask = (df['AwayTeam'] == team_name)
+    home_mask = (df['HomeTeam'] == team_name)
+    res_df = df[mask]
+    res_df['Opponent'] = 0
+    res_df['GoalsScored'] = 0
+    res_df['GoalsTaken'] = 0
+
+    res_df['Opponent'].loc[away_mask] = res_df['HomeTeam'].loc[away_mask]
+    res_df['Opponent'].loc[home_mask] = res_df['AwayTeam'].loc[home_mask]
+
+    res_df['GoalsScored'].loc[away_mask] = res_df['AwayGoals'].loc[away_mask]
+    res_df['GoalsScored'].loc[home_mask] = res_df['HomeGoals'].loc[home_mask]
+
+    res_df['GoalsTaken'].loc[away_mask] = res_df['HomeGoals'].loc[away_mask]
+    res_df['GoalsTaken'].loc[home_mask] = res_df['AwayGoals'].loc[home_mask]
+
+    res_df['Result'] = 0
+    res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
+    res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
+    res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
+
+    res_df = res_df.set_index('LeagueDay', drop=False).sort_index()
+
+    res_df['Points'] = 0
+    res_df['Points'].loc[res_df['Result'] == 'Win'] = 3
+    res_df['Points'].loc[res_df['Result'] == 'Tie'] = 1
+    res_df['Points'].loc[res_df['Result'] == 'Loss'] = 0
+    res_df['CumPoints'] = res_df['Points'].cumsum()
+
+    res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
+
+    return res_df

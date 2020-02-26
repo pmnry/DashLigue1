@@ -4,7 +4,11 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-from DataHandler import consolidate_season_data
+from DataHandler import consolidate_season_data, get_team_results
+import flask
+from config import Config
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
@@ -14,56 +18,18 @@ FILENAME = 'resultats-ligue-1.csv'
 # df = pd.read_csv(DATA_PATH + FILENAME, sep=';', names=['LeagueDay', 'StartDate', 'EndDate', 'HomeTeam', 'AwayTeam',
 #                                                       'HomeGoals', 'AwayGoals'], parse_dates=[1,2], header=0)
 
-def get_team_results(team_name, season):
-    df = consolidate_season_data('ligue_1', season)
-
-    mask = (df['HomeTeam'] == team_name) + (df['AwayTeam'] == team_name)
-    away_mask = (df['AwayTeam'] == team_name)
-    home_mask = (df['HomeTeam'] == team_name)
-    res_df = df[mask]
-    res_df['Opponent'] = 0
-    res_df['GoalsScored'] = 0
-    res_df['GoalsTaken'] = 0
-
-    res_df['Opponent'].loc[away_mask] = res_df['HomeTeam'].loc[away_mask]
-    res_df['Opponent'].loc[home_mask] = res_df['AwayTeam'].loc[home_mask]
-
-    res_df['GoalsScored'].loc[away_mask] = res_df['AwayGoals'].loc[away_mask]
-    res_df['GoalsScored'].loc[home_mask] = res_df['HomeGoals'].loc[home_mask]
-
-    res_df['GoalsTaken'].loc[away_mask] = res_df['HomeGoals'].loc[away_mask]
-    res_df['GoalsTaken'].loc[home_mask] = res_df['AwayGoals'].loc[home_mask]
-
-    res_df['Result'] = 0
-    res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
-    res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
-    res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
-
-    res_df = res_df.set_index('LeagueDay', drop=False).sort_index()
-
-    res_df['Points'] = 0
-    res_df['Points'].loc[res_df['Result'] == 'Win'] = 3
-    res_df['Points'].loc[res_df['Result'] == 'Tie'] = 1
-    res_df['Points'].loc[res_df['Result'] == 'Loss'] = 0
-    res_df['CumPoints'] = res_df['Points'].cumsum()
-
-    res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
-
-    return res_df
-
-
 def build_banner():
     return html.Div(
         id="banner",
         className="banner",
         children=[
-            html.Img(id="ligue_1_logo", src="assets\\ligue_1_logo.svg", width='100px', height='200px', className='six columns'),
+            html.Img(id="ligue_1_logo", src="assets\\ligue_1_logo.svg", width='75px', height='150px', className='six columns'),
             html.Div([
                 html.Div(
                     id="banner-text",
                     children=[
-                        html.H2("Football Data Explorer", className='six rows'),
-                        html.H3("Ligue 1", className='six rows'),
+                        html.H3("Football Data Explorer", className='six rows'),
+                        html.H4("Ligue 1", className='six rows'),
                     ],
                 )]
             , className='six columns')
@@ -91,13 +57,14 @@ def build_tabs():
                                                    selected_className='custom-tab--selected'
                                                    ),
                                            ]
-                                 )
+                                 ),
+                        html.Div(id="app-content"),
                     ])
 
 
 def build_tab1():
     return [
-        dcc.Dropdown(id='season', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
+        dcc.Dropdown(id='season1', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
         html.Div([
             html.Div([
                 html.Div(children='''Season points'''),
@@ -111,16 +78,13 @@ def build_tab1():
 
 def build_tab2():
     return [
-        dcc.Dropdown(id='season', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
         html.Div([
-            html.Div([
                 html.Div(children='''Goals Scored/Taken'''),
-                dcc.Dropdown(id='all_teams2'),
+                dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
                 dcc.Graph(
                     id='hist_wlt'
-                )], className='six columns')]
-        ),
-        #build_summary()
+                )],
+        className='six columns')
     ]
 
 
@@ -155,83 +119,56 @@ def serve_layout():
     layout = html.Div(children=[
         build_banner(),
 
-        dcc.Interval(
-            id="interval-component",
-            interval=2 * 1000,  # in milliseconds
-            n_intervals=50,  # start at batch 50
-            disabled=True,
-        ),
         html.Div(
             id="app-container",
             children=[
                 build_tabs(),
                 # Main app
-                html.Div(id="app-content"),
             ],
         ),
-        dcc.Store(id="n-interval-stage", data=50),
     ])
     return layout
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
-
+server = flask.Flask(__name__)
+app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
+server.config.from_object(Config)
+db = SQLAlchemy(server)
+migrate = Migrate(server, db)
 app.layout = serve_layout()
 
-@app.callback(
-    [dash.dependencies.Output("app-content", "children"), dash.dependencies.Output("interval-component", "n_intervals")],
-    [dash.dependencies.Input("app-tabs", "value")],
-    [dash.dependencies.State("n-interval-stage", "data")],
+@app.callback(dash.dependencies.Output("app-content", "children"),
+              [dash.dependencies.Input("app-tabs", "value")],
 )
-def render_tab_content(tab_switch, stopped_interval):
+def render_tab_content(tab_switch):
     if tab_switch == "tab1":
-        return build_tab1(), stopped_interval
+        return build_tab1()
     elif tab_switch == "tab2":
-        return build_tab2(), stopped_interval
-
-
-# Update interval
-@app.callback(
-    dash.dependencies.Output("n-interval-stage", "data"),
-    [dash.dependencies.Input("app-tabs", "value")],
-    [
-        dash.dependencies.State("interval-component", "n_intervals"),
-        dash.dependencies.State("interval-component", "disabled"),
-        dash.dependencies.State("n-interval-stage", "data"),
-    ],
-)
-def update_interval_state(tab_switch, cur_interval, disabled, cur_stage):
-    if disabled:
-        return cur_interval
-
-    if tab_switch == "tab1":
-        return cur_interval
-    return cur_stage
+        return build_tab2()
 
 @app.callback(dash.dependencies.Output('all_teams1', 'value'),
-               [dash.dependencies.Input('all_teams1', 'options')])
+              [dash.dependencies.Input('all_teams1', 'options')])
 def get_teams_value_scatter(all_teams1):
     return all_teams1[0]['value']
 
 @app.callback(dash.dependencies.Output('all_teams1', 'options'),
-               [dash.dependencies.Input('season', 'value')])
+              [dash.dependencies.Input('season1', 'value')])
 def get_teams_options_scatter(season):
     return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
 
-@app.callback([dash.dependencies.Output('all_teams2', 'options')],
-               [dash.dependencies.Input('season', 'value')])
+@app.callback(dash.dependencies.Output('all_teams2', 'value'),
+              [dash.dependencies.Input('all_teams2', 'options')])
+def get_teams_value_hist(all_teams2):
+    return all_teams2[0]['value']
+
+@app.callback(dash.dependencies.Output('all_teams2', 'options'),
+               [dash.dependencies.Input('season2', 'value')])
 def get_teams_options_hist(season):
     return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
 
-@app.callback([dash.dependencies.Output('all_teams2', 'value')],
-               [dash.dependencies.Input('all_teams2', 'options')])
-def get_teams_value_scatter(all_teams2):
-    return all_teams2[0]['value']
-
-@app.callback(
-    dash.dependencies.Output('scored-taken-goals', 'figure'),
-    [dash.dependencies.Input('all_teams1', 'value'), dash.dependencies.Input('season', 'value')])
+@app.callback(dash.dependencies.Output('scored-taken-goals', 'figure'),
+              [dash.dependencies.Input('all_teams1', 'value'), dash.dependencies.Input('season1', 'value')])
 def update_scatter_graph(teams, season):
     teams_dfs = {}
 
@@ -269,7 +206,7 @@ def update_scatter_graph(teams, season):
 
 @app.callback(
     dash.dependencies.Output('hist_wlt', 'figure'),
-    [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season', 'value')])
+    [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])
 def update_hist_graph(team, season):
     res_df = get_team_results(team, season)
 
@@ -304,7 +241,7 @@ def update_hist_graph(team, season):
 
 
 @app.callback(dash.dependencies.Output('summary_table', 'data'),
-              [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season', 'value')])
+              [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])
 def summary_table(all_teams2, season):
     res_df = get_team_results(all_teams2, season)
     summary = pd.DataFrame([res_df['GoalsTaken'].mean(), res_df['GoalsScored'].mean(),
