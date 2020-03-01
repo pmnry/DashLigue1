@@ -1,5 +1,5 @@
 import requests
-from config import API_KEY
+from api_config import API_KEY
 import json
 import pandas as pd
 
@@ -112,3 +112,5 @@ def get_team_results(team_name, season):
     res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
 
     return res_df
+
+test_df = consolidate_season_data('Ligue 1', 2018)

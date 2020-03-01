@@ -6,9 +6,9 @@ import dash_html_components as html
 import dash_table
 from DataHandler import consolidate_season_data, get_team_results
 import flask
-from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from config import Config
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
@@ -136,6 +136,8 @@ app = dash.Dash(__name__, server=server, external_stylesheets=external_styleshee
 server.config.from_object(Config)
 db = SQLAlchemy(server)
 migrate = Migrate(server, db)
+from models import League
+
 app.layout = serve_layout()
 
 @app.callback(dash.dependencies.Output("app-content", "children"),
