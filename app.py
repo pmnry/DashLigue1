@@ -4,11 +4,20 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-from DataHandler import consolidate_season_data, get_team_results
 import flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import Config
+
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+server = flask.Flask(__name__)
+app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
+server.config.from_object(Config)
+db = SQLAlchemy(server)
+migrate = Migrate(server, db)
+from models import League
+from DataHandler import consolidate_season_data, get_team_results
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
@@ -128,15 +137,6 @@ def serve_layout():
         ),
     ])
     return layout
-
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-server = flask.Flask(__name__)
-app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
-server.config.from_object(Config)
-db = SQLAlchemy(server)
-migrate = Migrate(server, db)
-from models import League
 
 app.layout = serve_layout()
 

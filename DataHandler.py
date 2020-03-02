@@ -2,6 +2,8 @@ import requests
 from api_config import API_KEY
 import json
 import pandas as pd
+from app import db
+from models import League
 
 URL = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 URL_LEAGUES = "https://api-football-v1.p.rapidapi.com/v2/leagues"
@@ -59,20 +61,23 @@ def consolidate_season_data(league_name, season_year):
         fixtures_dicts = json.load(json_file)
 
     df = pd.DataFrame(fixtures_dicts['api']['fixtures'])
-    df['awayTeamID'] = df['awayTeam'].apply(lambda x: x['team_id'])
-    df['AwayTeam'] = df['awayTeam'].apply(lambda x: x['team_name'])
+    df['away_team_id'] = df['awayTeam'].apply(lambda x: x['team_id'])
+    df['away_team'] = df['awayTeam'].apply(lambda x: x['team_name'])
 
-    df['homeTeamID'] = df['homeTeam'].apply(lambda x: x['team_id'])
-    df['HomeTeam'] = df['homeTeam'].apply(lambda x: x['team_name'])
+    df['home_team_id'] = df['homeTeam'].apply(lambda x: x['team_id'])
+    df['home_team'] = df['homeTeam'].apply(lambda x: x['team_name'])
 
     df['halftime'] = df['score'].apply(lambda x: x['halftime'])
     df['fulltime'] = df['score'].apply(lambda x: x['fulltime'])
 
-    df['GameDate'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
-    df['LeagueDay'] = df['round'].apply(lambda x: int(x.replace('Regular Season - ', '')))
+    df['game_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
+    df['event_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
+    df['league_day'] = df['round'].apply(lambda x: int(x.replace('Regular Season - ', '')))
 
-    df.rename(columns={'goalsHomeTeam': 'HomeGoals', 'goalsAwayTeam': 'AwayGoals'}, inplace=True)
-    df = df.drop(['awayTeam', 'homeTeam', 'score', 'referee', 'league'], axis=1)
+    df.rename(columns={'goalsHomeTeam': 'home_goals', 'goalsAwayTeam': 'away_goals',
+                       'statusShort': 'status_short', 'firstHalfStart': 'first_half_start',
+                       'secondHalfStart': 'second_half_start'}, inplace=True)
+    df = df.drop(['awayTeam', 'homeTeam', 'score', 'referee', 'league', 'elapsed'], axis=1)
 
     return df
 
@@ -113,4 +118,13 @@ def get_team_results(team_name, season):
 
     return res_df
 
-test_df = consolidate_season_data('Ligue 1', 2018)
+def set_db_league(league_name,year):
+    df = consolidate_season_data(league_name, year)
+
+    for idx, row in df.iterrows():
+        row_league = League(**row.to_dict())
+        db.session.add(row_league)
+
+    db.session.commit()
+
+set_db_league('Ligue 1', 2010)

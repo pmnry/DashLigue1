@@ -1,4 +1,4 @@
-from Main import db
+from app import db
 
 class Fixture(db.Model):
     fixture_id = db.Column(db.BigInteger, primary_key=True)
@@ -41,7 +41,7 @@ class Fixture(db.Model):
 
 class League(db.Model):
     fixture_id = db.Column(db.BigInteger, primary_key=True)
-    league_id = db.Column(db.Integer, index=True, unique=True)
+    league_id = db.Column(db.Integer, index=True, unique=False)
     event_date = db.Column(db.DateTime, index=False, unique=False)
     event_timestamp = db.Column(db.BigInteger, index=False, unique=False)
     first_half_start = db.Column(db.BigInteger, index=False, unique=False)
@@ -50,11 +50,11 @@ class League(db.Model):
     status = db.Column(db.String(64), index=False, unique=False)
     status_short = db.Column(db.String(2), index=False, unique=False)
     venue = db.Column(db.String(128), index=False, unique=False)
-    home_goals = db.Column(db.Integer, index=False, unique=True)
-    away_goals = db.Column(db.Integer, index=False, unique=True)
-    away_team_id = db.Column(db.Integer, index=False, unique=True)
+    home_goals = db.Column(db.Integer, index=False, unique=False)
+    away_goals = db.Column(db.Integer, index=False, unique=False)
+    away_team_id = db.Column(db.Integer, index=False, unique=False)
     away_team = db.Column(db.String(128), index=False, unique=False)
-    home_team_id = db.Column(db.Integer, index=False, unique=True)
+    home_team_id = db.Column(db.Integer, index=False, unique=False)
     home_team = db.Column(db.String(128), index=False, unique=False)
     halftime = db.Column(db.String(64), index=False, unique=False)
     fulltime = db.Column(db.String(64), index=False, unique=False)
