@@ -2,7 +2,7 @@ from app import db
 
 class Fixture(db.Model):
     fixture_id = db.Column(db.BigInteger, primary_key=True)
-    league_id = db.Column(db.Integer, index=True, unique=True)
+    league_id = db.Column(db.Integer, index=True, unique=False)
     shots_on_goal_home = db.Column(db.Integer, index=False, unique=False)
     shots_on_goal_away = db.Column(db.Integer, index=False, unique=False)
     shots_off_goal_home = db.Column(db.Integer, index=False, unique=False)
