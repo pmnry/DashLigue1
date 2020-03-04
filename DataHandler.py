@@ -15,28 +15,35 @@ headers = {
     'x-rapidapi-key': API_KEY
 }
 
+def get_api_results(url, arg=None):
+    api_response = requests.request("GET", url + arg, headers=headers)
+    return json.loads(api_response.content)['api'], api_response
 
-def get_league_ids(league_name, country, url, seasons=None):
-    api_response = requests.request("GET", url, headers=headers)
-    league_dicts = json.loads(api_response.content)['api']['leagues']
+def get_league_ids(league_name, api_call=False, country=None, seasons=None):
     league_ids = dict()
+    if api_call:
+        league_dicts, api_response = get_api_results(URL_LEAGUES)['leagues']
+    else:
+        api_response=None
+        with open('data\\' + league_name.lower().replace(' ', '_') + '_ids.txt') as json_file:
+            league_dicts = json.load(json_file)['api']['leagues']
 
     if seasons is None:
         seasons = list(range(2010, 2020))
 
     for league_dict in league_dicts:
         if league_dict['name'] == league_name and league_dict['country'] == country:
-            if league_dict['season'] in seasons:
+            if league_dict['season'] == seasons:
                 league_ids[str(league_dict['season'])] = league_dict['league_id']
 
     return league_ids, api_response
 
 
 def get_league_fixtures(league_name, country, seasons=None):
-    league_ids, response = get_league_ids(league_name, country, URL_LEAGUES, seasons)
-
-    with open('data\\' + league_name.lower().replace(' ', '_') + '_ids.txt', 'w') as outfile:
-        json.dump(json.loads(response.content), outfile)
+    try:
+        league_ids, response = get_league_ids(league_name, seasons=seasons)
+    except:
+        league_ids, response = get_league_ids(league_name, True, country, seasons)
 
     for season, id in league_ids.items():
         api_response = requests.request("GET", ALL_FIXTURES_URL + str(id), headers=headers)
@@ -72,7 +79,12 @@ def consolidate_season_data(league_name, season_year):
 
     df['game_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
     df['event_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
+
+    df = df[df['round'] != 'Relegation Play Off - First Leg']
+    df = df[df['round'] != 'Relegation Play Off - Second Leg']
     df['league_day'] = df['round'].apply(lambda x: int(x.replace('Regular Season - ', '')))
+
+
 
     df.rename(columns={'goalsHomeTeam': 'home_goals', 'goalsAwayTeam': 'away_goals',
                        'statusShort': 'status_short', 'firstHalfStart': 'first_half_start',
@@ -81,32 +93,34 @@ def consolidate_season_data(league_name, season_year):
 
     return df
 
-def get_team_results(team_name, season):
-    df = consolidate_season_data('ligue_1', season)
+def get_team_results(country, league_name, team_name, season):
+    ids = get_league_ids(league_name, country=country, seasons=season)
+    query = db.session.query(League).filter((League.league_id == ids[0][str(season)]) * ((League.away_team == team_name) + (League.home_team == team_name))).statement
+    df = pd.read_sql_query(query, db.session.bind)
 
-    mask = (df['HomeTeam'] == team_name) + (df['AwayTeam'] == team_name)
-    away_mask = (df['AwayTeam'] == team_name)
-    home_mask = (df['HomeTeam'] == team_name)
+    mask = (df['home_team'] == team_name) + (df['away_team'] == team_name)
+    away_mask = (df['away_team'] == team_name)
+    home_mask = (df['home_team'] == team_name)
     res_df = df[mask]
     res_df['Opponent'] = 0
     res_df['GoalsScored'] = 0
     res_df['GoalsTaken'] = 0
 
-    res_df['Opponent'].loc[away_mask] = res_df['HomeTeam'].loc[away_mask]
-    res_df['Opponent'].loc[home_mask] = res_df['AwayTeam'].loc[home_mask]
+    res_df['Opponent'].loc[away_mask] = res_df['home_team'].loc[away_mask]
+    res_df['Opponent'].loc[home_mask] = res_df['away_team'].loc[home_mask]
 
-    res_df['GoalsScored'].loc[away_mask] = res_df['AwayGoals'].loc[away_mask]
-    res_df['GoalsScored'].loc[home_mask] = res_df['HomeGoals'].loc[home_mask]
+    res_df['GoalsScored'].loc[away_mask] = res_df['away_goals'].loc[away_mask]
+    res_df['GoalsScored'].loc[home_mask] = res_df['home_goals'].loc[home_mask]
 
-    res_df['GoalsTaken'].loc[away_mask] = res_df['HomeGoals'].loc[away_mask]
-    res_df['GoalsTaken'].loc[home_mask] = res_df['AwayGoals'].loc[home_mask]
+    res_df['GoalsTaken'].loc[away_mask] = res_df['home_goals'].loc[away_mask]
+    res_df['GoalsTaken'].loc[home_mask] = res_df['away_goals'].loc[home_mask]
 
     res_df['Result'] = 0
     res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
     res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
     res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
 
-    res_df = res_df.set_index('LeagueDay', drop=False).sort_index()
+    res_df = res_df.set_index('league_day', drop=False).sort_index()
 
     res_df['Points'] = 0
     res_df['Points'].loc[res_df['Result'] == 'Win'] = 3
@@ -114,7 +128,7 @@ def get_team_results(team_name, season):
     res_df['Points'].loc[res_df['Result'] == 'Loss'] = 0
     res_df['CumPoints'] = res_df['Points'].cumsum()
 
-    res_df.drop(['AwayTeam', 'HomeTeam', 'AwayGoals', 'HomeGoals'], axis=1, inplace=True)
+    res_df.drop(['away_team', 'home_team', 'away_goals', 'home_goals'], axis=1, inplace=True)
 
     return res_df
 
@@ -122,9 +136,8 @@ def set_db_league(league_name,year):
     df = consolidate_season_data(league_name, year)
 
     for idx, row in df.iterrows():
-        row_league = League(**row.to_dict())
-        db.session.add(row_league)
+        if db.session.query(League).filter_by(fixture_id=row.fixture_id).count() < 1:
+            row_league = League(**row.to_dict())
+            db.session.add(row_league)
 
     db.session.commit()
-
-set_db_league('Ligue 1', 2010)
