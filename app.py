@@ -18,7 +18,7 @@ server.config.from_object(Config)
 db = SQLAlchemy(server)
 migrate = Migrate(server, db)
 
-from DataHandler import consolidate_season_data, get_team_results
+import data_handler
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
@@ -153,7 +153,7 @@ def get_teams_value_scatter(all_teams1):
 @app.callback(dash.dependencies.Output('all_teams1', 'options'),
               [dash.dependencies.Input('season1', 'value')])
 def get_teams_options_scatter(season):
-    return [{'label': x, 'value': x} for x in consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
+    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('all_teams2', 'value'),
               [dash.dependencies.Input('all_teams2', 'options')])
@@ -163,7 +163,7 @@ def get_teams_value_hist(all_teams2):
 @app.callback(dash.dependencies.Output('all_teams2', 'options'),
                [dash.dependencies.Input('season2', 'value')])
 def get_teams_options_hist(season):
-    return [{'label': x, 'value': x} for x in consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
+    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('scored-taken-goals', 'figure'),
               [dash.dependencies.Input('all_teams1', 'value'), dash.dependencies.Input('season1', 'value')])
@@ -174,7 +174,7 @@ def update_scatter_graph(teams, season):
         teams = [teams]
 
     for team in teams:
-        teams_dfs[team] = get_team_results(COUNTRY, LEAGUE_NAME, team, season)
+        teams_dfs[team] = data_handler.get_team_results(COUNTRY, LEAGUE_NAME, team, season)
 
     return {
         'data': [
@@ -206,7 +206,7 @@ def update_scatter_graph(teams, season):
     dash.dependencies.Output('hist_wlt', 'figure'),
     [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])
 def update_hist_graph(team, season):
-    res_df = get_team_results(COUNTRY, LEAGUE_NAME, team, season)
+    res_df = data_handler.get_team_results(COUNTRY, LEAGUE_NAME, team, season)
 
     return {
         'data': [
@@ -241,7 +241,7 @@ def update_hist_graph(team, season):
 @app.callback(dash.dependencies.Output('summary_table', 'data'),
               [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])
 def summary_table(all_teams2, season):
-    res_df = get_team_results(COUNTRY, LEAGUE_NAME, all_teams2, season)
+    res_df = data_handler.get_team_results(COUNTRY, LEAGUE_NAME, all_teams2, season)
     summary = pd.DataFrame([res_df['goals_taken'].mean(), res_df['goals_scored'].mean(),
                             res_df['goals_taken'].std(), res_df['goals_scored'].std()],
                            index=['Average Goals Taken', 'Average Goals Scored', 'Stdev Goals Taken',
