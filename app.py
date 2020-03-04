@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -10,22 +9,19 @@ from flask_migrate import Migrate
 from config import Config
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+LEAGUE_NAME = 'Ligue 1'
+COUNTRY = 'France'
 
 server = flask.Flask(__name__)
 app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
 server.config.from_object(Config)
 db = SQLAlchemy(server)
 migrate = Migrate(server, db)
-from models import League
+
 from DataHandler import consolidate_season_data, get_team_results
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
-
-
-### Read Data
-# df = pd.read_csv(DATA_PATH + FILENAME, sep=';', names=['LeagueDay', 'StartDate', 'EndDate', 'HomeTeam', 'AwayTeam',
-#                                                       'HomeGoals', 'AwayGoals'], parse_dates=[1,2], header=0)
 
 def build_banner():
     return html.Div(
@@ -38,7 +34,7 @@ def build_banner():
                     id="banner-text",
                     children=[
                         html.H3("Football Data Explorer", className='six rows'),
-                        html.H4("Ligue 1", className='six rows'),
+                        html.H4(LEAGUE_NAME, className='six rows'),
                     ],
                 )]
             , className='six columns')
@@ -157,7 +153,7 @@ def get_teams_value_scatter(all_teams1):
 @app.callback(dash.dependencies.Output('all_teams1', 'options'),
               [dash.dependencies.Input('season1', 'value')])
 def get_teams_options_scatter(season):
-    return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
+    return [{'label': x, 'value': x} for x in consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('all_teams2', 'value'),
               [dash.dependencies.Input('all_teams2', 'options')])
@@ -167,7 +163,7 @@ def get_teams_value_hist(all_teams2):
 @app.callback(dash.dependencies.Output('all_teams2', 'options'),
                [dash.dependencies.Input('season2', 'value')])
 def get_teams_options_hist(season):
-    return [{'label': x, 'value': x} for x in consolidate_season_data('ligue_1', season)['HomeTeam'].unique()]
+    return [{'label': x, 'value': x} for x in consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('scored-taken-goals', 'figure'),
               [dash.dependencies.Input('all_teams1', 'value'), dash.dependencies.Input('season1', 'value')])
@@ -178,7 +174,7 @@ def update_scatter_graph(teams, season):
         teams = [teams]
 
     for team in teams:
-        teams_dfs[team] = get_team_results(team, season)
+        teams_dfs[team] = get_team_results(COUNTRY, LEAGUE_NAME, team, season)
 
     return {
         'data': [
@@ -188,7 +184,7 @@ def update_scatter_graph(teams, season):
                 mode='lines-markers',
                 name=team + ' Points',
                 hovertemplate='<b>Points</b>: %{y}' + '<br><b>League Day</b>: %{text}<br>',
-                text=[str(l) for l in res_df['LeagueDay']]
+                text=[str(l) for l in res_df['league_day']]
             )
             for team, res_df in teams_dfs.items()],
         'layout': {
@@ -210,19 +206,19 @@ def update_scatter_graph(teams, season):
     dash.dependencies.Output('hist_wlt', 'figure'),
     [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])
 def update_hist_graph(team, season):
-    res_df = get_team_results(team, season)
+    res_df = get_team_results(COUNTRY, LEAGUE_NAME, team, season)
 
     return {
         'data': [
             dict(
-                x=res_df['LeagueDay'],
-                y=res_df['GoalsScored'],
+                x=res_df['league_day'],
+                y=res_df['goals_scored'],
                 type='bar',
                 name='Goals Scored'
             ),
             dict(
-                x=res_df['LeagueDay'],
-                y=res_df['GoalsTaken'],
+                x=res_df['league_day'],
+                y=res_df['goals_taken'],
                 type='bar',
                 name='Goals Taken'
             )
@@ -245,9 +241,9 @@ def update_hist_graph(team, season):
 @app.callback(dash.dependencies.Output('summary_table', 'data'),
               [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])
 def summary_table(all_teams2, season):
-    res_df = get_team_results(all_teams2, season)
-    summary = pd.DataFrame([res_df['GoalsTaken'].mean(), res_df['GoalsScored'].mean(),
-                            res_df['GoalsTaken'].std(), res_df['GoalsScored'].std()],
+    res_df = get_team_results(COUNTRY, LEAGUE_NAME, all_teams2, season)
+    summary = pd.DataFrame([res_df['goals_taken'].mean(), res_df['goals_scored'].mean(),
+                            res_df['goals_taken'].std(), res_df['goals_scored'].std()],
                            index=['Average Goals Taken', 'Average Goals Scored', 'Stdev Goals Taken',
                                   'Stdev Goals Scored'],
                            columns=['Values'])
