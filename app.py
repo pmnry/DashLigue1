@@ -7,6 +7,8 @@ import flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import Config
+from datetime import datetime as dt
+
 
 external_stylesheets = ['https://codepen.io/trooperandz/pen/EOgJvg']
 LEAGUE_NAME = 'Ligue 1'
@@ -85,13 +87,35 @@ def build_tab2():
     return html.Div(children=[
         dcc.Dropdown(id='season2', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
         html.Div([
+            html.Div([
                 html.Div(children='''Goals Scored/Taken'''),
                 dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
                 dcc.Graph(
                     id='hist_wlt'
-                )],
-        className='six columns')
-    ])
+                )], className='six columns'),
+            html.Div(children=[
+                html.Div([html.H3("Summary Stats")]),
+                build_summary()], className='six columns')
+        ])], className='row')
+
+def build_tab3():
+    return html.Div(children=[
+        dcc.DatePickerSingle(
+            id='date-picker-single',
+            date=dt(2010, 8, 28)
+        ),
+        html.Div([
+            html.Div([
+                html.Div(children='''Goals Scored/Taken'''),
+                dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
+                dcc.Graph(
+                    id='hist_wlt'
+                )], className='six columns'),
+            html.Div(children=[
+                html.Div([html.H3("Summary Stats")]),
+                build_summary()], className='six columns')
+        ])], className='row')
+
 
 
 def build_summary():
