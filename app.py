@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import Config
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = ['https://codepen.io/trooperandz/pen/EOgJvg']
 LEAGUE_NAME = 'Ligue 1'
 COUNTRY = 'France'
 
@@ -68,7 +68,7 @@ def build_tabs():
 
 
 def build_tab1():
-    return [
+    return html.Div(children=[
         dcc.Dropdown(id='season1', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
         html.Div([
             html.Div([
@@ -78,11 +78,12 @@ def build_tab1():
                     id='scored-taken-goals'
                 )], className='six columns')]
         )
-    ]
+    ])
 
 
 def build_tab2():
-    return [
+    return html.Div(children=[
+        dcc.Dropdown(id='season2', options=[{'label': x, 'value': x} for x in list(range(2010, 2020))], value=2018),
         html.Div([
                 html.Div(children='''Goals Scored/Taken'''),
                 dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
@@ -90,7 +91,7 @@ def build_tab2():
                     id='hist_wlt'
                 )],
         className='six columns')
-    ]
+    ])
 
 
 def build_summary():

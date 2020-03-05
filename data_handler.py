@@ -41,8 +41,10 @@ def get_league_ids(league_name, api_call=False, country=None, seasons=None):
 
 def get_league_fixtures(league_name, country, seasons=None):
     try:
+        # get league ids from json
         league_ids, response = get_league_ids(league_name, seasons=seasons)
     except:
+        # get league ids from api call
         league_ids, response = get_league_ids(league_name, True, country, seasons)
 
     for season, id in league_ids.items():
@@ -82,9 +84,8 @@ def consolidate_season_data(league_name, season_year):
 
     df = df[df['round'] != 'Relegation Play Off - First Leg']
     df = df[df['round'] != 'Relegation Play Off - Second Leg']
+    df = df[df['round'] != 'Finals']
     df['league_day'] = df['round'].apply(lambda x: int(x.replace('Regular Season - ', '')))
-
-
 
     df.rename(columns={'goalsHomeTeam': 'home_goals', 'goalsAwayTeam': 'away_goals',
                        'statusShort': 'status_short', 'firstHalfStart': 'first_half_start',
@@ -103,22 +104,22 @@ def get_team_results(country, league_name, team_name, season):
     home_mask = (df['home_team'] == team_name)
     res_df = df[mask]
     res_df['Opponent'] = 0
-    res_df['GoalsScored'] = 0
-    res_df['GoalsTaken'] = 0
+    res_df['goals_scored'] = 0
+    res_df['goals_taken'] = 0
 
     res_df['Opponent'].loc[away_mask] = res_df['home_team'].loc[away_mask]
     res_df['Opponent'].loc[home_mask] = res_df['away_team'].loc[home_mask]
 
-    res_df['GoalsScored'].loc[away_mask] = res_df['away_goals'].loc[away_mask]
-    res_df['GoalsScored'].loc[home_mask] = res_df['home_goals'].loc[home_mask]
+    res_df['goals_scored'].loc[away_mask] = res_df['away_goals'].loc[away_mask]
+    res_df['goals_scored'].loc[home_mask] = res_df['home_goals'].loc[home_mask]
 
-    res_df['GoalsTaken'].loc[away_mask] = res_df['home_goals'].loc[away_mask]
-    res_df['GoalsTaken'].loc[home_mask] = res_df['away_goals'].loc[home_mask]
+    res_df['goals_taken'].loc[away_mask] = res_df['home_goals'].loc[away_mask]
+    res_df['goals_taken'].loc[home_mask] = res_df['away_goals'].loc[home_mask]
 
     res_df['Result'] = 0
-    res_df['Result'].loc[res_df['GoalsScored'] > res_df['GoalsTaken']] = 'Win'
-    res_df['Result'].loc[res_df['GoalsScored'] == res_df['GoalsTaken']] = 'Tie'
-    res_df['Result'].loc[res_df['GoalsScored'] < res_df['GoalsTaken']] = 'Loss'
+    res_df['Result'].loc[res_df['goals_scored'] > res_df['goals_taken']] = 'Win'
+    res_df['Result'].loc[res_df['goals_scored'] == res_df['goals_taken']] = 'Tie'
+    res_df['Result'].loc[res_df['goals_scored'] < res_df['goals_taken']] = 'Loss'
 
     res_df = res_df.set_index('league_day', drop=False).sort_index()
 
