@@ -133,7 +133,7 @@ body {
 #Specs-tab.custom-tab, #Control-chart-tab.custom-tab {
   background-color: #161a28;
   letter-spacing: 1px;
-  color: inherit;
+  color: darkgray;
   border: 0;
   border-bottom: #1E2130 solid 4px !important;
   display: flex;
@@ -310,7 +310,7 @@ body {
 
 #value-setter-set-btn:hover, #value-setter-view-btn:hover {
   color: #91dfd2;
-  border-color: white;
+  border-color: darkgray;
 }
 
 #value-setter-panel-usl, #value-setter-panel-lsl, #value-setter-panel-ucl, #value-setter-panel-lcl {
@@ -336,16 +336,16 @@ body {
 
 .react-numeric-input input {
   background-color: #242633 !important;
-  border-color: darkgray !important;
-  color: white !important;
+  border-color: black !important;
+  color: black !important;
 }
 
 .react-numeric-input b:nth-child(2) i {
-  border-color: transparent transparent white !important;
+  border-color: transparent transparent black !important;
 }
 
 .react-numeric-input b:nth-child(3) i {
-  border-color: white transparent transparent !important;
+  border-color: black transparent transparent !important;
 }
 
 
@@ -359,7 +359,7 @@ body {
 
 /*Dropdown items*/
 .Select-control, .Select, .Select-value-label, .Select-clear-zone {
-  color: white;
+  color: black;
 }
 
 
@@ -516,7 +516,7 @@ body {
 /* Tab 2 Specs
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 #stop-button > div > button {
-  color: white !important;
+  color: darkgray !important;
   background-color: #1d202d !important;
   border: 1px solid #4B5460 !important;
   border-radius: 4px;
