@@ -3,7 +3,7 @@ from api_config import API_KEY
 import json
 import pandas as pd
 from app import db
-from models import League
+from models import League, Fixture
 
 URL = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 URL_LEAGUES = "https://api-football-v1.p.rapidapi.com/v2/leagues"
@@ -56,14 +56,39 @@ def get_league_fixtures(league_name, country, seasons=None):
 
     return json.loads(api_response.content)['api']
 
-def get_fixtures_stats(fixture_id):
-    try:
-        api_response = requests.request("GET", FIXTURES_STATS_URL + str(fixture_id), headers=headers)
-    except:
-        print('Error calling API')
+def format_fixture_stats(res_dict, fixture_id):
+    formated_dict = dict(fixture_id=fixture_id)
 
-    if api_response.status_code == 200:
-        return json.loads(api_response.content)['api']
+    for key, item in res_dict.items():
+            if key == 'Passes %':
+                key = 'Passes Perc'
+
+            for sub_key, sub_item in item.items():
+                if '%' in sub_item:
+                    sub_item = int(sub_item.replace('%', ''))/100
+                else:
+                    sub_item = int(sub_item.replace('%', ''))
+
+                formated_dict[key.lower().replace(' ', '_') + '_' + sub_key] = sub_item
+
+    return formated_dict
+
+def get_fixtures_stats(fixture_id):
+    query = db.session.query(Fixture).filter_by(fixture_id=fixture_id).statement
+    if pd.read_sql_query(query, db.session.bind).shape[0] > 0:
+        df = pd.read_sql_query(query, db.session.bind)
+    else:
+        api_response = requests.request("GET", FIXTURES_STATS_URL + str(fixture_id), headers=headers)
+        res_dict = json.loads(api_response.content)['api']['statistics']
+        res_dict = format_fixture_stats(res_dict, fixture_id)
+        if db.session.query(Fixture).filter_by(fixture_id=fixture_id).count() < 1:
+            row_fixture = Fixture(**res_dict)
+            db.session.add(row_fixture)
+
+        query = db.session.query(Fixture).filter_by(fixture_id=fixture_id).statement
+        df = pd.read_sql_query(query, db.session.bind)
+
+    return df
 
 def consolidate_season_data(league_name, season_year):
     with open('data\\' + league_name.lower().replace(' ', '_') + '_fixtures_' + str(season_year) + '.txt') as json_file:
@@ -142,3 +167,5 @@ def set_db_league(league_name,year):
             db.session.add(row_league)
 
     db.session.commit()
+
+get_fixtures_stats(93524)
