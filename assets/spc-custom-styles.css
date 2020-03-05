@@ -68,21 +68,9 @@ body {
   line-height: 3rem;
 }
 
-#banner-logo {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .banner button:hover {
   color: #92e0d3;
   border-color: whitesmoke;
-}
-
-.banner Img {
-  height: 3rem;
-  margin: 0px 10px;
 }
 
 /* The Modal (background) */
@@ -606,10 +594,6 @@ body {
 
   .banner h6 {
     font-size: 1.3rem;
-  }
-
-  #banner-logo button {
-    display: none;
   }
 
   .banner Img {
