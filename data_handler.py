@@ -4,6 +4,7 @@ import json
 import pandas as pd
 from app import db
 from models import League, Fixture
+import datetime as dt
 
 URL = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 URL_LEAGUES = "https://api-football-v1.p.rapidapi.com/v2/leagues"
@@ -58,6 +59,8 @@ def get_league_fixtures(league_name, country, seasons=None):
 
 def format_fixture_stats(res_dict, fixture_id):
     formated_dict = dict(fixture_id=fixture_id)
+    leagueID = db.session.query(League).filter_by(fixture_id=fixture_id).first().league_id
+    formated_dict['league_id'] = leagueID
 
     for key, item in res_dict.items():
             if key == 'Passes %':
@@ -84,6 +87,7 @@ def get_fixtures_stats(fixture_id):
         if db.session.query(Fixture).filter_by(fixture_id=fixture_id).count() < 1:
             row_fixture = Fixture(**res_dict)
             db.session.add(row_fixture)
+            db.session.commit()
 
         query = db.session.query(Fixture).filter_by(fixture_id=fixture_id).statement
         df = pd.read_sql_query(query, db.session.bind)
@@ -158,6 +162,26 @@ def get_team_results(country, league_name, team_name, season):
 
     return res_df
 
+def get_team_fixtures(date, league):
+    fixture_year = date.year
+    fixture_month = date.month
+
+    if fixture_month < 8:
+        fixture_season = fixture_year - 1
+    else:
+        fixture_season = fixture_year
+
+    ids = get_league_ids(league, api_call=False, country='France', seasons=fixture_season)
+
+    query = db.session.query(League).filter((League.league_id == ids[0][str(fixture_season)]) * (League.event_date >= date) *
+                                            (League.event_date < dt.datetime(fixture_year, fixture_month, date.day + 1))).statement
+    df = pd.read_sql_query(query, db.session.bind)
+    df['all_teams'] = df['home_team'] + ' - ' + df['away_team']
+
+    fixture_dict = dict(zip(df.fixture_id, df.all_teams))
+
+    return fixture_dict
+
 def set_db_league(league_name,year):
     df = consolidate_season_data(league_name, year)
 
@@ -167,5 +191,3 @@ def set_db_league(league_name,year):
             db.session.add(row_league)
 
     db.session.commit()
-
-get_fixtures_stats(93524)

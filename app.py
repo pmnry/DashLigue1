@@ -63,6 +63,12 @@ def build_tabs():
                                                    value='tab2',
                                                    selected_className='custom-tab--selected'
                                                    ),
+                                           dcc.Tab(id='fixture-tab',
+                                                   label='Fixture Data',
+                                                   className='custom-tab',
+                                                   value='tab3',
+                                                   selected_className='custom-tab--selected'
+                                                   ),
                                            ]
                                  ),
                         html.Div(id="app-content"),
@@ -102,25 +108,51 @@ def build_tab3():
     return html.Div(children=[
         dcc.DatePickerSingle(
             id='date-picker-single',
-            date=dt(2010, 8, 28)
+            min_date_allowed=dt(2010, 8, 5),
+            max_date_allowed=dt(2020, 3, 21),
+            date=str(dt(2018, 9, 23))
         ),
         html.Div([
             html.Div([
-                html.Div(children='''Goals Scored/Taken'''),
-                dcc.Dropdown(id='all_teams2', value='Paris Saint Germain'),
-                dcc.Graph(
-                    id='hist_wlt'
-                )], className='six columns'),
+                html.Div(children='''Fixture main stats'''),
+                dcc.Dropdown(id='all_teams3')
+            ]),
             html.Div(children=[
                 html.Div([html.H3("Summary Stats")]),
-                build_summary()], className='six columns')
+                build_summary_fixture()
+            ], className='six columns')
         ])], className='row')
-
-
 
 def build_summary():
     return html.Div([
         dash_table.DataTable(id='summary_table',
+                             columns=[{"name": i, "id": i} for i in ['Stats', 'Values']],
+                             style_cell_conditional=[
+                                                        {
+                                                            'if': {'column_id': c},
+                                                            'textAlign': 'left'
+                                                        } for c in ['Stats']
+                                                    ] + [
+                                                        {
+                                                            'if': {'column_id': c},
+                                                            'textAlign': 'center'
+                                                        } for c in ['Values']
+                                                    ],
+                             style_data_conditional=[
+                                 {
+                                     'if': {'row_index': 'odd'},
+                                     'backgroundColor': 'rgb(248, 248, 248)'
+                                 }
+                             ],
+                             style_header={
+                                 'backgroundColor': 'rgb(230, 230, 230)',
+                                 'fontWeight': 'bold'
+                             }),
+    ], className='six columns')
+
+def build_summary_fixture():
+    return html.Div([
+        dash_table.DataTable(id='summary_fixture_table',
                              columns=[{"name": i, "id": i} for i in ['Stats', 'Values']],
                              style_cell_conditional=[
                                                         {
@@ -169,6 +201,8 @@ def render_tab_content(tab_switch):
         return build_tab1()
     elif tab_switch == "tab2":
         return build_tab2()
+    elif tab_switch == "tab3":
+        return build_tab3()
 
 @app.callback(dash.dependencies.Output('all_teams1', 'value'),
               [dash.dependencies.Input('all_teams1', 'options')])
@@ -189,6 +223,19 @@ def get_teams_value_hist(all_teams2):
                [dash.dependencies.Input('season2', 'value')])
 def get_teams_options_hist(season):
     return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
+
+@app.callback(dash.dependencies.Output('all_teams3', 'value'),
+              [dash.dependencies.Input('all_teams3', 'options')])
+def get_teams_value_hist(all_teams3):
+    return all_teams3[0]['value']
+
+@app.callback(dash.dependencies.Output('all_teams3', 'options'),
+               [dash.dependencies.Input('date-picker-single', 'date')])
+def get_fixtures_options(date):
+    date = pd.to_datetime(date)
+    fixture_dict = data_handler.get_team_fixtures(date, LEAGUE_NAME)
+
+    return [{'label': value, 'value': key} for key, value in fixture_dict.items()]
 
 @app.callback(dash.dependencies.Output('scored-taken-goals', 'figure'),
               [dash.dependencies.Input('all_teams1', 'value'), dash.dependencies.Input('season1', 'value')])
@@ -271,6 +318,19 @@ def summary_table(all_teams2, season):
                             res_df['goals_taken'].std(), res_df['goals_scored'].std()],
                            index=['Average Goals Taken', 'Average Goals Scored', 'Stdev Goals Taken',
                                   'Stdev Goals Scored'],
+                           columns=['Values'])
+    summary = summary.reset_index(drop=False)
+    summary = summary.rename({'index': 'Stats'}, axis=1)
+    return summary.to_dict(orient='records')
+
+@app.callback(dash.dependencies.Output('summary_fixture_table', 'data'),
+              [dash.dependencies.Input('all_teams3', 'value')])
+def summary_fixture_table(fixture_id):
+    res_df = data_handler.get_fixtures_stats(fixture_id)
+    summary = pd.DataFrame([res_df['shots_on_goal_home'].values, res_df['shots_on_goal_away'].values,
+                            res_df['total_shots_home'].values, res_df['total_shots_away'].values],
+                           index=['Shots On Goal Home', 'Shots On Goal Away', 'Total Shots On Goal Home',
+                                  'Total Shots On Goal Away'],
                            columns=['Values'])
     summary = summary.reset_index(drop=False)
     summary = summary.rename({'index': 'Stats'}, axis=1)
