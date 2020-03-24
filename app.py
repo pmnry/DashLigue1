@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import Config
 from datetime import datetime as dt
-
+import plotly.graph_objects as go
 
 external_stylesheets = ['https://codepen.io/trooperandz/pen/EOgJvg']
 LEAGUE_NAME = 'Ligue 1'
@@ -106,22 +106,27 @@ def build_tab2():
 
 def build_tab3():
     return html.Div(children=[
-        dcc.DatePickerSingle(
+        html.Div(children=[dcc.DatePickerSingle(
             id='date-picker-single',
             min_date_allowed=dt(2010, 8, 5),
             max_date_allowed=dt(2020, 3, 21),
             date=str(dt(2018, 9, 23))
         ),
-        html.Div([
             html.Div([
                 html.Div(children='''Fixture main stats'''),
                 dcc.Dropdown(id='all_teams3')
-            ]),
+            ])], className='row'),
+        html.Div([html.Div([
             html.Div(children=[
                 html.Div([html.H3("Summary Stats")]),
                 build_summary_fixture()
-            ], className='six columns')
-        ])], className='row')
+            ])
+        ], className='six columns'),
+            html.Div([
+                html.Div([html.H3("Offensive/Defensive Stats")]),
+                dcc.Graph(id='radar-chart')
+            ], className='six columns')], className='row')
+    ])
 
 def build_summary():
     return html.Div([
@@ -309,6 +314,39 @@ def update_hist_graph(team, season):
         }
     }
 
+@app.callback(
+    dash.dependencies.Output('radar-chart', 'figure'),
+    [dash.dependencies.Input('all_teams3', 'value')])
+def update_radar_chart(fixture_id):
+    res_df = data_handler.get_fixtures_stats(fixture_id)
+    home_team, away_team = data_handler.get_team_names(fixture_id)
+    res_df['passes_perc_home'] = res_df['passes_perc_home']*100
+    res_df['passes_perc_away'] = res_df['passes_perc_away']*100
+
+    res_df['ball_possession_home'] = res_df['ball_possession_home']*100
+    res_df['ball_possession_away'] = res_df['ball_possession_away']*100
+
+    categories = ['Shots Taken', 'Shots on Goal', 'Possession', 'Fouls', 'Accurate Passes Percentage']
+    home_team_stats = res_df[['total_shots_home', 'shots_on_goal_home', 'ball_possession_home', 'fouls_home',
+                              'passes_perc_home']]._values[0]
+    away_team_stats = res_df[['total_shots_away', 'shots_on_goal_away', 'ball_possession_away', 'fouls_away',
+                              'passes_perc_away']]._values[0]
+
+    return {
+        'data':
+            [
+                go.Scatterpolar(r=home_team_stats,
+                                theta=categories,
+                                fill='toself',
+                                name=home_team[0]),
+                go.Scatterpolar(r=away_team_stats,
+                                theta=categories,
+                                fill='toself',
+                                name=away_team[0])
+             ],
+        'layout':
+            {'polar': dict(radialaxis=dict(visible=True),tickformat=".2%"), 'showlegend': True}
+    }
 
 @app.callback(dash.dependencies.Output('summary_table', 'data'),
               [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])

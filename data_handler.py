@@ -162,6 +162,14 @@ def get_team_results(country, league_name, team_name, season):
 
     return res_df
 
+def get_team_names(fixture_id):
+    query = db.session.query(League).filter((League.fixture_id == fixture_id)).statement
+    df = pd.read_sql_query(query, db.session.bind)
+    home_team = df['home_team'].values
+    away_team = df['away_team'].values
+
+    return home_team, away_team
+
 def get_team_fixtures(date, league):
     fixture_year = date.year
     fixture_month = date.month
