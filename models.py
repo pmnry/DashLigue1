@@ -1,6 +1,8 @@
 from app import db
 
 class Fixture(db.Model):
+    __tablename__ = 'fixture'
+
     fixture_id = db.Column(db.BigInteger, primary_key=True)
     league_id = db.Column(db.Integer, index=True, unique=False)
     shots_on_goal_home = db.Column(db.Integer, index=False, unique=False)
@@ -40,6 +42,8 @@ class Fixture(db.Model):
         return '<Fixture #{}>'.format(self.fixture_id)
 
 class League(db.Model):
+    __tablename__ = 'league'
+
     fixture_id = db.Column(db.BigInteger, primary_key=True)
     league_id = db.Column(db.Integer, index=True, unique=False)
     event_date = db.Column(db.DateTime, index=False, unique=False)

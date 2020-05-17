@@ -6,24 +6,26 @@ from app import db
 from models import League, Fixture
 import datetime as dt
 
+BASE_URL = "https://api-football-v1.p.rapidapi.com/v2/"
 URL = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 URL_LEAGUES = "https://api-football-v1.p.rapidapi.com/v2/leagues"
 ALL_FIXTURES_URL = "https://api-football-v1.p.rapidapi.com/v2/fixtures/league/"
 FIXTURES_STATS_URL = "https://api-football-v1.p.rapidapi.com/v2/statistics/fixture/"
 
-headers = {
+HEADERS = {
     'x-rapidapi-host': "api-football-v1.p.rapidapi.com",
     'x-rapidapi-key': API_KEY
 }
 
-def get_api_results(url, arg=None):
-    api_response = requests.request("GET", url + arg, headers=headers)
+def get_api_results(url, arg=""):
+    api_response = requests.request("GET", url + arg, headers=HEADERS)
     return json.loads(api_response.content)['api'], api_response
 
 def get_league_ids(league_name, api_call=False, country=None, seasons=None):
     league_ids = dict()
     if api_call:
-        league_dicts, api_response = get_api_results(URL_LEAGUES)['leagues']
+        league_dicts, api_response = get_api_results(URL_LEAGUES)
+        league_dicts = league_dicts['leagues']
     else:
         api_response=None
         with open('data\\' + league_name.lower().replace(' ', '_') + '_ids.txt') as json_file:
@@ -49,7 +51,7 @@ def get_league_fixtures(league_name, country, seasons=None):
         league_ids, response = get_league_ids(league_name, True, country, seasons)
 
     for season, id in league_ids.items():
-        api_response = requests.request("GET", ALL_FIXTURES_URL + str(id), headers=headers)
+        api_response = requests.request("GET", ALL_FIXTURES_URL + str(id), headers=HEADERS)
 
         if api_response.status_code == 200:
             with open('data\\' + league_name.lower().replace(' ', '_') + '_fixtures_' + season + '.txt', 'w') as outfile:
@@ -59,7 +61,7 @@ def get_league_fixtures(league_name, country, seasons=None):
 
 def format_fixture_stats(res_dict, fixture_id):
     formated_dict = dict(fixture_id=fixture_id)
-    leagueID = db.session.query(League).filter_by(fixture_id=fixture_id).first().league_id
+    leagueID = db.session.query(League).filter_by(fixture_id=int(fixture_id)).first().league_id
     formated_dict['league_id'] = leagueID
 
     for key, item in res_dict.items():
@@ -95,6 +97,7 @@ def get_fixtures_stats(fixture_id):
     return df
 
 def consolidate_season_data(league_name, season_year):
+
     with open('data\\' + league_name.lower().replace(' ', '_') + '_fixtures_' + str(season_year) + '.txt') as json_file:
         fixtures_dicts = json.load(json_file)
 
@@ -199,3 +202,13 @@ def set_db_league(league_name,year):
             db.session.add(row_league)
 
     db.session.commit()
+
+ids = get_league_ids('Premier League', api_call=True, country='England', seasons=[2010, 2011, 2012,2013,2014,2015,2016,2017,2018])
+ids = get_league_ids('Ligue 1', api_call=False, country='France', seasons=2010)
+query = db.session.query(League).filter((League.league_id == ids[0][str(2010)])).statement
+df = pd.read_sql_query(query, db.session.bind)
+
+for i in range(30):
+    get_fixtures_stats(df['fixture_id'].iloc[i])
+
+# get_api_results(BASE_URL, arg="leagues")
