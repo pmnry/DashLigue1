@@ -66,4 +66,4 @@ class League(db.Model):
     league_day = db.Column(db.Integer, index=False, unique=False)
 
     def __repr__(self):
-        return '<Fixture #{}>'.format(self.fixture_id)
+        return '<League #{}>'.format(self.fixture_id)

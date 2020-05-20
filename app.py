@@ -217,7 +217,7 @@ def get_teams_value_scatter(all_teams1):
 @app.callback(dash.dependencies.Output('all_teams1', 'options'),
               [dash.dependencies.Input('season1', 'value')])
 def get_teams_options_scatter(season):
-    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
+    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME, season)['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('all_teams2', 'value'),
               [dash.dependencies.Input('all_teams2', 'options')])
@@ -227,7 +227,7 @@ def get_teams_value_hist(all_teams2):
 @app.callback(dash.dependencies.Output('all_teams2', 'options'),
                [dash.dependencies.Input('season2', 'value')])
 def get_teams_options_hist(season):
-    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME.lower().replace(' ', '_'), season)['home_team'].unique()]
+    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME, season)['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('all_teams3', 'value'),
               [dash.dependencies.Input('all_teams3', 'options')])
