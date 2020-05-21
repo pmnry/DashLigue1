@@ -16,8 +16,8 @@
 }
 
 body {
-  background-color: #1e2130;
-  color: #555e8c;
+  background-color: #f8f8ff;
+  color: #00004a;
   font-family: "Open Sans", sans-serif;
   width: 100%;
   height: 100vh;
@@ -36,12 +36,12 @@ body {
 
 .banner {
   height: fit-content;
-  background-color: #1e2130;
+  background-color: #f8f8ff;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #4B5460;
+  border-bottom: 1px solid #f8f8ff;
   padding: 1rem 10rem;
   width: 100%;
 }
@@ -62,14 +62,14 @@ body {
 }
 
 .banner button {
-  color: #95969A;
+  color: #00004a;
   margin-right: 10px;
   height: 3rem;
   line-height: 3rem;
 }
 
 .banner button:hover {
-  color: #92e0d3;
+  color: #00004a;
   border-color: whitesmoke;
 }
 
@@ -122,7 +122,7 @@ body {
 }
 
 .custom-tabs {
-  background-color: #1E2130;
+  background-color: #f8f8ff;
   text-transform: uppercase;
   font-weight: 600;
   font-size: 14px;
@@ -131,11 +131,11 @@ body {
 }
 
 #Specs-tab.custom-tab, #Control-chart-tab.custom-tab {
-  background-color: #161a28;
+  background-color: #f8f8ff;
   letter-spacing: 1px;
   color: darkgray;
   border: 0;
-  border-bottom: #1E2130 solid 4px !important;
+  border-bottom: #f8f8ff solid 4px !important;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -145,7 +145,7 @@ body {
 }
 
 #Specs-tab.custom-tab--selected, #Control-chart-tab.custom-tab--selected {
-  border-bottom: #91dfd2 solid 4px !important;
+  border-bottom: #f8f8ff solid 4px !important;
 }
 
 #Specs-tab.custom-tab {
@@ -207,7 +207,7 @@ body {
 #Overlay_OOC_graph > div > div,
 #Volume_OOC_graph > div > div {
   width: 100%;
-  background-color: #1e2130 !important;
+  background-color: #f8f8ff !important;
 }
 
 #quick-stats.row {
@@ -221,7 +221,7 @@ body {
   position: relative;
   z-index: 4;
   width: 100%;
-  border-top: #1E2130 solid 0.8rem;
+  border-top: #f8f8ff solid 0.8rem;
 }
 
 #metric-summary-session {
@@ -232,7 +232,7 @@ body {
 #ooc-piechart-outer {
   height: 100%;
   margin: 0;
-  border-left: #1E2130 solid 0.8rem;
+  border-left: #f8f8ff solid 0.8rem;
   flex: 1 1 auto;
 }
 
@@ -274,7 +274,7 @@ body {
 
 
 #metric-select-title {
-  color: darkgray;
+  color: #f8f8ff;
 }
 
 #button-div {
@@ -293,7 +293,7 @@ body {
 
 #value-setter-panel-header {
   font-weight: bold;
-  color: darkgray;
+  color: #f8f8ff;
   line-height: 1;
   padding: 2rem 0;
   border-bottom: 1px solid #4b5460;
@@ -305,12 +305,12 @@ body {
 
 #value-setter-view-btn, #value-setter-set-btn {
   border: 1px solid #4B5460;
-  color: darkgray;
+  color: #f8f8ff;
 }
 
 #value-setter-set-btn:hover, #value-setter-view-btn:hover {
-  color: #91dfd2;
-  border-color: darkgray;
+  color: #f8f8ff;
+  border-color: #dfdfff;
 }
 
 #value-setter-panel-usl, #value-setter-panel-lsl, #value-setter-panel-ucl, #value-setter-panel-lcl {
@@ -335,8 +335,8 @@ body {
 }
 
 .react-numeric-input input {
-  background-color: #242633 !important;
-  border-color: black !important;
+  background-color: #dfdfff !important;
+  border-color: #dfdfff !important;
   color: black !important;
 }
 
@@ -354,7 +354,7 @@ body {
 
 /*Dropdown items*/
 .Select-control, .Select-multi-value-wrapper, .Select-menu-outer div {
-  background-color: #242633;
+  background-color: #f8f8ff;
 }
 
 /*Dropdown items*/
@@ -365,7 +365,7 @@ body {
 
 /*Dropdown items*/
 .Select-menu-outer {
-  background-color: #242633;
+  background-color: #f8f8ff;
   border: 1px solid darkgray !important;
 }
 
@@ -378,7 +378,7 @@ body {
 /*Dropdown arrow + delete button*/
 .Select-control, .Select-control > span {
   color: white;
-  background: #242633 !important;
+  background: #dfdfff !important;
 }
 
 /*Placeholder*/
@@ -390,7 +390,7 @@ body {
 .Select--single > .Select-control .Select-value, .Select-placeholder {
   /*border: 1px solid darkgray;*/
   border-radius: 4px;
-  background-color: #242633;
+  background-color: #dfdfff;
   cursor: pointer;
 }
 
@@ -403,7 +403,7 @@ body {
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 
 #app-container {
-  background: #161a28;
+  background: #f8f8ff;
   margin: 1rem 2rem;
   max-width: 100%;
   width: 100%;
@@ -463,7 +463,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  border-right: #1E2130 solid 0.8rem;
+  border-right: #f8f8ff solid 0.8rem;
   flex: 1 1;
   padding: 2rem;
   max-width: 25%;
@@ -517,8 +517,8 @@ body {
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 #stop-button > div > button {
   color: darkgray !important;
-  background-color: #1d202d !important;
-  border: 1px solid #4B5460 !important;
+  background-color: #dfdfff !important;
+  border: 1px solid #dfdfff !important;
   border-radius: 4px;
   height: 40px;
   line-height: 40px;
@@ -527,7 +527,7 @@ body {
 #stop-button > div > button:hover {
   color: #91dfd2 !important;
   border-color: white !important;
-  background-color: #1d202d !important;
+  background-color: #dfdfff !important;
 }
 
 #card-1 P, #card-2 P {
@@ -700,8 +700,8 @@ body {
     height: fit-content !important;
     justify-content: space-between;
     align-items: flex-start;
-    border-top: 1px solid #1E2130;
-    border-bottom: 1px solid #1E2130;
+    border-top: 1px solid #f8f8ff;
+    border-bottom: 1px solid #f8f8ff;
   }
 
   #metric-rows .column, #metric-rows .columns {
