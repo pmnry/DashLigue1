@@ -9,10 +9,11 @@ from flask_migrate import Migrate
 from config import Config
 from datetime import datetime as dt
 import plotly.graph_objects as go
+import plotly.subplots as tls
 
 external_stylesheets = ['https://codepen.io/trooperandz/pen/EOgJvg']
-LEAGUE_NAME = 'Ligue 1'
-COUNTRY = 'France'
+LEAGUE_NAME = 'Premier League'
+COUNTRY = 'England'
 
 server = flask.Flask(__name__)
 app = dash.Dash(__name__, server=server, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
@@ -21,16 +22,18 @@ db = SQLAlchemy(server)
 migrate = Migrate(server, db)
 
 import data_handler
+from models import League
 
 DATA_PATH = 'D:\\Data Mac\\Documents\\Datasets\\'
 FILENAME = 'resultats-ligue-1.csv'
+LEAGUE_COUNTRY = {'Ligue 1': 'France', 'Premier League': 'England'}
 
 def build_banner():
     return html.Div(
         id="banner",
         className="banner",
         children=[
-            html.Img(id="ligue_1_logo", src="assets\\ligue_1_logo.svg", width='75px', height='150px', className='six columns'),
+            html.Img(id="premier_league_logo", src="assets\\premier_league_logo.svg", width='75px', height='150px', className='six columns'),
             html.Div([
                 html.Div(
                     id="banner-text",
@@ -217,7 +220,15 @@ def get_teams_value_scatter(all_teams1):
 @app.callback(dash.dependencies.Output('all_teams1', 'options'),
               [dash.dependencies.Input('season1', 'value')])
 def get_teams_options_scatter(season):
-    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME, season)['home_team'].unique()]
+    league_id = data_handler.get_league_ids(LEAGUE_NAME, api_call=True, country=LEAGUE_COUNTRY[LEAGUE_NAME], seasons=season)
+    query = db.session.query(League).filter(League.league_id == league_id[0][str(season)]).statement
+    df = pd.read_sql_query(query, db.session.bind)
+
+    df.rename(columns={'goalsHomeTeam': 'home_goals', 'goalsAwayTeam': 'away_goals',
+                       'statusShort': 'status_short', 'firstHalfStart': 'first_half_start',
+                       'secondHalfStart': 'second_half_start'}, inplace=True)
+
+    return [{'label': x, 'value': x} for x in df['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('all_teams2', 'value'),
               [dash.dependencies.Input('all_teams2', 'options')])
@@ -227,7 +238,16 @@ def get_teams_value_hist(all_teams2):
 @app.callback(dash.dependencies.Output('all_teams2', 'options'),
                [dash.dependencies.Input('season2', 'value')])
 def get_teams_options_hist(season):
-    return [{'label': x, 'value': x} for x in data_handler.consolidate_season_data(LEAGUE_NAME, season)['home_team'].unique()]
+    league_id = data_handler.get_league_ids(LEAGUE_NAME, api_call=True, country=LEAGUE_COUNTRY[LEAGUE_NAME],
+                                            seasons=season)
+    query = db.session.query(League).filter(League.league_id == league_id[0][str(season)]).statement
+    df = pd.read_sql_query(query, db.session.bind)
+
+    df.rename(columns={'goalsHomeTeam': 'home_goals', 'goalsAwayTeam': 'away_goals',
+                       'statusShort': 'status_short', 'firstHalfStart': 'first_half_start',
+                       'secondHalfStart': 'second_half_start'}, inplace=True)
+
+    return [{'label': x, 'value': x} for x in df['home_team'].unique()]
 
 @app.callback(dash.dependencies.Output('all_teams3', 'value'),
               [dash.dependencies.Input('all_teams3', 'options')])
@@ -266,15 +286,15 @@ def update_scatter_graph(teams, season):
             for team, res_df in teams_dfs.items()],
         'layout': {
             'height': 400,
-            'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
+            'margin': {'l': 50, 'b': 50, 'r': 0, 't': 0},
             'annotations': [{
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
                 'xref': 'paper', 'yref': 'paper', 'showarrow': False,
                 'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
                 'text': 'Season Points'
             }],
-            'yaxis': {'type': 'linear'},
-            'xaxis': {'showgrid': False}
+            'yaxis': {'title': 'Cumulative League Points', 'type': 'linear'},
+            'xaxis': {'title': 'Season Days', 'showgrid': False}
         }
     }
 
@@ -302,15 +322,15 @@ def update_hist_graph(team, season):
         ],
         'layout': {
             'height': 400,
-            'margin': {'l': 20, 'b': 30, 'r': 10, 't': 10},
+            'margin': {'l': 50, 'b': 50, 'r': 0, 't': 0},
             'annotations': [{
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
                 'xref': 'paper', 'yref': 'paper', 'showarrow': False,
                 'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
                 'text': 'Game Score'
             }],
-            'yaxis': {'type': 'linear'},
-            'xaxis': {'showgrid': False}
+            'yaxis': {'title': 'Goals', 'type': 'linear'},
+            'xaxis': {'title': 'League Days', 'showgrid': False}
         }
     }
 
@@ -339,6 +359,38 @@ def update_radar_chart(fixture_id):
                                 theta=categories,
                                 fill='toself',
                                 name=home_team[0]),
+                go.Scatterpolar(r=away_team_stats,
+                                theta=categories,
+                                fill='toself',
+                                name=away_team[0])
+             ],
+        'layout':
+            {'polar': dict(radialaxis=dict(visible=True),tickformat=".2%"), 'showlegend': True}
+    }
+
+@app.callback(
+    dash.dependencies.Output('radar-chart', 'figure'),
+    [dash.dependencies.Input('all_teams3', 'value')])
+def update_hoz_bar_chart(fixture_id):
+    res_df = data_handler.get_fixtures_stats(fixture_id)
+    home_team, away_team = data_handler.get_team_names(fixture_id)
+    res_df['passes_perc_home'] = res_df['passes_perc_home']*100
+    res_df['passes_perc_away'] = res_df['passes_perc_away']*100
+
+    res_df['ball_possession_home'] = res_df['ball_possession_home']*100
+    res_df['ball_possession_away'] = res_df['ball_possession_away']*100
+
+    categories = ['Shots Taken', 'Shots on Goal', 'Possession', 'Fouls', 'Accurate Passes Percentage']
+    home_team_stats = res_df[['total_shots_home', 'shots_on_goal_home', 'ball_possession_home', 'fouls_home',
+                              'passes_perc_home']]._values[0]
+    away_team_stats = res_df[['total_shots_away', 'shots_on_goal_away', 'ball_possession_away', 'fouls_away',
+                              'passes_perc_away']]._values[0]
+    fig = tls.make_subplots(row=1, cols=2, shared_yaxes=True, vertical_spacing=0.001, horizontal_spacing=0.001)
+    return {
+        'data':
+            [
+                go.Bar(x=home_team_stats,
+                       name=home_team[0]),
                 go.Scatterpolar(r=away_team_stats,
                                 theta=categories,
                                 fill='toself',

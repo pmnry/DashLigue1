@@ -18,6 +18,8 @@ HEADERS = {
     'x-rapidapi-key': API_KEY
 }
 
+LEAGUE_COUNTRY = {'Ligue 1': 'France', 'Premier League': 'England'}
+
 def get_api_results(url, arg=""):
     api_response = requests.request("GET", url + arg, headers=HEADERS)
     return json.loads(api_response.content)['api'], api_response
@@ -66,10 +68,12 @@ def format_fixture_stats(res_dict, fixture_id):
     formated_dict['league_id'] = leagueID
 
     for key, item in res_dict.items():
-            if key == 'Passes %':
-                key = 'Passes Perc'
+
+            key = 'Passes Perc' if key == 'Passes %' else key
 
             for sub_key, sub_item in item.items():
+                sub_item = '0' if sub_item is None else sub_item
+
                 if '%' in sub_item:
                     sub_item = int(sub_item.replace('%', ''))/100
                 else:
@@ -103,40 +107,40 @@ def get_fixtures_stats(fixture_id):
 
 def consolidate_season_data(league_name, season_year):
 
-    # with open('data\\' + league_name.lower().replace(' ', '_') + '_fixtures_' + str(season_year) + '.txt') as json_file:
-    #     #     fixtures_dicts = json.load(json_file)
+    league_id = get_league_ids(league_name, api_call=True, country=LEAGUE_COUNTRY[league_name], seasons=season_year)
 
-    id = get_league_ids(league_name, api_call=True, country='France', seasons=season_year)
-    query = db.session.query(League).filter(League.league_id == id[0][str(season_year)]).statement
+    league_dicts, api_response = get_api_results(ALL_FIXTURES_URL, str(league_id[0][str(season_year)]))
 
-    # df = pd.DataFrame(fixtures_dicts['api']['fixtures'])
-    df = pd.read_sql_query(query, db.session.bind)
-    # df['away_team_id'] = df['away_team'].apply(lambda x: x['team_id'])
-    # df['away_team'] = df['away_team'].apply(lambda x: x['team_name'])
-    #
-    # df['home_team_id'] = df['home_team'].apply(lambda x: x['team_id'])
-    # df['home_team'] = df['home_team'].apply(lambda x: x['team_name'])
-    #
-    # df['halftime'] = df['score'].apply(lambda x: x['halftime'])
-    # df['fulltime'] = df['score'].apply(lambda x: x['fulltime'])
-    #
-    # df['game_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
-    # df['event_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
-    #
-    # df = df[df['round'] != 'Relegation Play Off - First Leg']
-    # df = df[df['round'] != 'Relegation Play Off - Second Leg']
-    # df = df[df['round'] != 'Finals']
-    # df['league_day'] = df['round'].apply(lambda x: int(x.replace('Regular Season - ', '')))
+    df = pd.DataFrame(league_dicts['fixtures'])
+    # df = pd.read_sql_query(query, db.session.bind)
+    df['away_team_id'] = df['awayTeam'].apply(lambda x: x['team_id'])
+    df['away_team'] = df['awayTeam'].apply(lambda x: x['team_name'])
+
+    df['home_team_id'] = df['homeTeam'].apply(lambda x: x['team_id'])
+    df['home_team'] = df['homeTeam'].apply(lambda x: x['team_name'])
+
+    df['halftime'] = df['score'].apply(lambda x: x['halftime'])
+    df['fulltime'] = df['score'].apply(lambda x: x['fulltime'])
+
+    df['game_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
+    df['event_date'] = pd.to_datetime(df['event_date'], format='%Y-%m-%d %H:%M:%S.%f')
+
+    df = df[df['round'] != 'Relegation Play Off - First Leg']
+    df = df[df['round'] != 'Relegation Play Off - Second Leg']
+    df = df[df['round'] != 'Finals']
+    df['league_day'] = df['round'].apply(lambda x: int(x.replace('Regular Season - ', '')))
 
     df.rename(columns={'goalsHomeTeam': 'home_goals', 'goalsAwayTeam': 'away_goals',
                        'statusShort': 'status_short', 'firstHalfStart': 'first_half_start',
                        'secondHalfStart': 'second_half_start'}, inplace=True)
-    # df = df.drop(['awayTeam', 'homeTeam', 'score', 'referee', 'league', 'elapsed'], axis=1)
+    df = df.drop(['awayTeam', 'homeTeam', 'score', 'referee', 'league', 'elapsed'], axis=1)
+
+
 
     return df
 
 def get_team_results(country, league_name, team_name, season):
-    ids = get_league_ids(league_name, country=country, seasons=season)
+    ids = get_league_ids(league_name, api_call=True, country=country, seasons=season)
     query = db.session.query(League).filter(and_(League.league_id == ids[0][str(season)], or_((League.away_team == team_name), (League.home_team == team_name)))).statement
     df = pd.read_sql_query(query, db.session.bind)
 
@@ -191,7 +195,7 @@ def get_team_fixtures(date, league):
     else:
         fixture_season = fixture_year
 
-    ids = get_league_ids(league, api_call=False, country='France', seasons=fixture_season)
+    ids = get_league_ids(league, api_call=True, country=LEAGUE_COUNTRY[league], seasons=fixture_season)
 
     query = db.session.query(League).filter(League.league_id == ids[0][str(fixture_season)], League.event_date >= date,
                                             League.event_date < dt.datetime(fixture_year, fixture_month, date.day + 1)).statement
@@ -213,13 +217,13 @@ def set_db_league(league_name,year):
                 db.session.add(row_league)
                 db.session.commit()
                 db.session.flush()
-                print(row.fixture_id, ": Success")
+                print("Fixture: ", row.fixture_id, ", Year:", year, ": Success")
             except Exception as e:
                 db.session.rollback()
-                print(row.fixture_id, ": Failed")
+                print("Fixture: ", row.fixture_id, ", Year:", year  , ": Failed")
 
-# for x in range(2019, 2020):
-#     set_db_league("Ligue 1", x)
+# for x in range(2011, 2020):
+#     set_db_league("Premier League", x)
 
 # ids = get_league_ids('Premier League', api_call=True, country='England', seasons=[2010, 2011, 2012,2013,2014,2015,2016,2017,2018])
 # ids = get_league_ids('Ligue 1', api_call=False, country='France', seasons=2010)
