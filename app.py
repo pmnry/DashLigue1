@@ -127,7 +127,7 @@ def build_tab3():
         ], className='six columns'),
             html.Div([
                 html.Div([html.H3("Offensive/Defensive Stats")]),
-                dcc.Graph(id='radar-chart')
+                dcc.Graph(id='hozbar-chart')
             ], className='six columns')], className='row')
     ])
 
@@ -280,8 +280,8 @@ def update_scatter_graph(teams, season):
                 y=res_df['CumPoints'],
                 mode='lines-markers',
                 name=team + ' Points',
-                hovertemplate='<b>Points</b>: %{y}' + '<br><b>League Day</b>: %{text}<br>',
-                text=[str(l) for l in res_df['league_day']]
+                hovertemplate='<b>Points</b>: %{y}' + '<br><b>League Day</b>: %{text[0]}<br>' + '<br><b>Opponent</b>: %{text[1]}<br>',
+                text=[(str(l1), l2) for l1, l2 in zip(res_df['league_day'], res_df['Opponent'])]
             )
             for team, res_df in teams_dfs.items()],
         'layout': {
@@ -348,9 +348,9 @@ def update_radar_chart(fixture_id):
 
     categories = ['Shots Taken', 'Shots on Goal', 'Possession', 'Fouls', 'Accurate Passes Percentage']
     home_team_stats = res_df[['total_shots_home', 'shots_on_goal_home', 'ball_possession_home', 'fouls_home',
-                              'passes_perc_home']]._values[0]
+                              'passes_perc_home']].values[0]
     away_team_stats = res_df[['total_shots_away', 'shots_on_goal_away', 'ball_possession_away', 'fouls_away',
-                              'passes_perc_away']]._values[0]
+                              'passes_perc_away']].values[0]
 
     return {
         'data':
@@ -369,7 +369,7 @@ def update_radar_chart(fixture_id):
     }
 
 @app.callback(
-    dash.dependencies.Output('radar-chart', 'figure'),
+    dash.dependencies.Output('hozbar-chart', 'figure'),
     [dash.dependencies.Input('all_teams3', 'value')])
 def update_hoz_bar_chart(fixture_id):
     res_df = data_handler.get_fixtures_stats(fixture_id)
@@ -380,25 +380,24 @@ def update_hoz_bar_chart(fixture_id):
     res_df['ball_possession_home'] = res_df['ball_possession_home']*100
     res_df['ball_possession_away'] = res_df['ball_possession_away']*100
 
-    categories = ['Shots Taken', 'Shots on Goal', 'Possession', 'Fouls', 'Accurate Passes Percentage']
-    home_team_stats = res_df[['total_shots_home', 'shots_on_goal_home', 'ball_possession_home', 'fouls_home',
-                              'passes_perc_home']]._values[0]
+    home_team_stats = res_df[['home_goals', 'total_shots_home', 'shots_on_goal_home', 'ball_possession_home', 'fouls_home',
+                              'passes_perc_home']]
     away_team_stats = res_df[['total_shots_away', 'shots_on_goal_away', 'ball_possession_away', 'fouls_away',
-                              'passes_perc_away']]._values[0]
-    fig = tls.make_subplots(row=1, cols=2, shared_yaxes=True, vertical_spacing=0.001, horizontal_spacing=0.001)
-    return {
-        'data':
-            [
-                go.Bar(x=home_team_stats,
-                       name=home_team[0]),
-                go.Scatterpolar(r=away_team_stats,
-                                theta=categories,
-                                fill='toself',
-                                name=away_team[0])
-             ],
-        'layout':
-            {'polar': dict(radialaxis=dict(visible=True),tickformat=".2%"), 'showlegend': True}
-    }
+                              'passes_perc_away']]
+    home_team_stats.rename(columns={'home_goals': 'Goals', 'total_shots_home': 'Total Shots',
+                                    'shots_on_goal_home': 'Shots on Goals', 'ball_possession_home': 'Possession',
+                                    'fouls_home': 'Fouls', 'passes_perc_home': 'Passes Precision'}, inplace=True)
+    away_team_stats.rename(columns={'away_goals': 'Goals', 'total_shots_away': 'Total Shots',
+                                    'shots_on_goal_away': 'Shots on Goals', 'ball_possession_away': 'Possession',
+                                    'fouls_away': 'Fouls', 'passes_perc_away': 'Passes Precision'}, inplace=True)
+
+    fig = tls.make_subplots(rows=1, cols=2, shared_yaxes=True, vertical_spacing=0.001, horizontal_spacing=0.001)
+
+    fig.add_trace(go.Bar(x=home_team_stats.values[0], y=home_team_stats.columns,
+                         name=home_team[0], orientation='h'))
+    fig.add_trace(go.Bar(x=away_team_stats.values[0], y=away_team_stats.columns,
+                         name=away_team[0], orientation='h'))
+    return fig
 
 @app.callback(dash.dependencies.Output('summary_table', 'data'),
               [dash.dependencies.Input('all_teams2', 'value'), dash.dependencies.Input('season2', 'value')])

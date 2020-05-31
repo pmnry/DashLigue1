@@ -103,6 +103,12 @@ def get_fixtures_stats(fixture_id):
         query = db.session.query(Fixture).filter_by(fixture_id=fixture_id).statement
         df = pd.read_sql_query(query, db.session.bind)
 
+    query2 = db.session.query(League).filter_by(fixture_id=fixture_id).statement
+    df2 = pd.read_sql_query(query2, db.session.bind)
+
+    df['home_goals'] = df2['home_goals']
+    df['away_goals'] = df2['away_goals']
+
     return df
 
 def consolidate_season_data(league_name, season_year):
