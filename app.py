@@ -311,13 +311,17 @@ def update_hist_graph(team, season):
                 x=res_df['league_day'],
                 y=res_df['goals_scored'],
                 type='bar',
-                name='Goals Scored'
+                name='Goals Scored',
+                hovertemplate='<b>Points</b>: %{y}' + '<br><b>League Day</b>: %{text[0]}<br>' + '<br><b>Opponent</b>: %{text[1]}<br>',
+                text=[(str(l1), l2) for l1, l2 in zip(res_df['league_day'], res_df['Opponent'])]
             ),
             dict(
                 x=res_df['league_day'],
                 y=res_df['goals_taken'],
                 type='bar',
-                name='Goals Taken'
+                name='Goals Taken',
+                hovertemplate='<b>Points</b>: %{y}' + '<br><b>League Day</b>: %{text[0]}<br>' + '<br><b>Opponent</b>: %{text[1]}<br>',
+                text=[(str(l1), l2) for l1, l2 in zip(res_df['league_day'], res_df['Opponent'])]
             )
         ],
         'layout': {
